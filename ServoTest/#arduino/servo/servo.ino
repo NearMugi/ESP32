@@ -16,6 +16,10 @@ int n;
 #define RANGE_MAX 100
 bool rev;
 
+const unsigned int LOOP_TIME_US = 50000;  //ループ関数の周期(μsec)
+int processingTime; //loopの頭から最後までの処理時間
+
+
 unsigned int GetServoPWM(unsigned int _v) {
   long rtn = map(_v, RANGE_MIN, RANGE_MAX, SG90_MIN, SG90_MAX);
   return (unsigned int)rtn;
@@ -26,11 +30,15 @@ void setup() {
 
   ledcSetup(LEDC_CH_SERVO, SG90_PWM, LEDC_BIT); //使用チャンネル・周期・分解能
   ledcAttachPin(PIN_SERVO, LEDC_CH_SERVO);  //ピンとチャンネルを紐づける
-  n = (RANGE_MIN + RANGE_MAX) / 2;
+  n = (RANGE_MIN + RANGE_MAX) / 2;  //原点スタート
   rev = true;
 }
 
 void loop() {
+
+  processingTime = micros();
+
+
   if (rev) {
     n++;
     if (n > RANGE_MAX) {
@@ -47,5 +55,19 @@ void loop() {
   unsigned int _pwm =   GetServoPWM(n);
   Serial.println(_pwm);
   ledcWrite(LEDC_CH_SERVO, _pwm);
-  delay(50);
+
+  //一連の処理にかかった時間を考慮して待ち時間を設定する
+  wait_ConstantLoop();
+
 }
+
+void wait_ConstantLoop() {
+  processingTime = micros() - processingTime;
+  long loopWaitTime = LOOP_TIME_US - processingTime;
+
+  if (loopWaitTime < 0)  return;
+
+  long start_time = micros();
+  while ( micros() - start_time < loopWaitTime) {};
+}
+
