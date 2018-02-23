@@ -6,7 +6,8 @@ static const int PIN_GYRO_Y = A1;  // Y AXIS ROTATION V of ENC-03R
 //加速度センサーのPIN設定(x,yに注意)
 static const int PIN_ACCY_X = A3;  // accelaration Y of KXR94-2050 (rotated left 90 degree on Breadboard)
 static const int PIN_ACCY_Y = A2;  // accelaration X of KXR94-2050 (rotated left 90 degree on Breadboard)
-static const int PIN_ACCY_Z = D8;  // accelaration Z of KXR94-2050
+//static const int PIN_ACCY_Z = A4;  // accelaration Z of KXR94-2050
+static const int PIN_ACCY_Z = 34;  // accelaration Z of KXR94-2050
 
 Kalman kalmanX; // Create the Kalman instances
 Kalman kalmanY;
@@ -135,25 +136,25 @@ void loop() {
 #endif
 
 #if true
-  Serial.print(accXangle);
-  Serial.print("\t");
-  Serial.print(gyroXangle);
-  Serial.print("\t");
-  Serial.print(compAngleX);
-  Serial.print("\t");
-  Serial.print(kalAngleX);
-  Serial.print("\t");
+//  Serial.print(accXangle);
+//  Serial.print("\t");
+//  Serial.print(gyroXangle);
+//  Serial.print("\t");
+//  Serial.print(compAngleX);
+//  Serial.print("\t");
+//  Serial.print(kalAngleX);
+//  Serial.print("\t");
 
   Serial.print("\t");
 
-  Serial.print(accYangle);
-  Serial.print("\t");
-  Serial.print(gyroYangle);
-  Serial.print("\t");
-  Serial.print(compAngleY);
-  Serial.print("\t");
+//  Serial.print(accYangle);
+//  Serial.print("\t");
+//  Serial.print(gyroYangle);
+//  Serial.print("\t");
+//  Serial.print(compAngleY);
+//  Serial.print("\t");
   Serial.print(kalAngleY);
-  Serial.print("\t");
+//  Serial.print("\t");
 
   //Serial.print(temp);Serial.print("\t");
 #endif
