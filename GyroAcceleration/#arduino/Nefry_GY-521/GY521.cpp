@@ -1,4 +1,5 @@
-#include "Arduino.h"
+//#include "Arduino.h"
+#include <Nefry.h>
 #include "GY521.h"
 
 //コンストラクタ
@@ -50,7 +51,7 @@ void gy521::GetAccGyro() {
 
 // MPU6050_read
 int gy521::MPU6050_read(int start, uint8_t *buffer, int size) {
-  Serial.println("MPU6050_read");
+  //Serial.println("MPU6050_read");
   int i, n, error;
   Wire.beginTransmission(MPU6050_I2C_ADDRESS);
   n = Wire.write(start);
