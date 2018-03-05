@@ -54,8 +54,7 @@ class gy521
     
     gy521();
     void Init();
-    void Getdt();
-    void GetAccGyro();
+    void GetData();
   private:
     accel_t_gyro_union accel_t_gyro;
     int MPU6050_read(int start, uint8_t *buffer, int size);

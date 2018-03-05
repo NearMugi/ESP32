@@ -1,5 +1,6 @@
 //https://github.com/Nefry-Community/arduino-esp32/tree/fix/i2c
-//NefryBTでI2C通信ができるようにしたパッケージが必要だった。
+//https://esa-pages.io/p/sharing/3062/posts/943/63bac6a3d50b2f201cd9.html
+//NefryBTでI2C通信ができるようにしたライブラリに変更が必要だった
 
 #include <Nefry.h>
 #include "Wire.h"

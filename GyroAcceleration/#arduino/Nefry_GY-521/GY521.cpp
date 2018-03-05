@@ -21,11 +21,14 @@ void gy521::Init() {
   MPU6050_write_reg (MPU6050_PWR_MGMT_1, 0);
 }
 
-void gy521::Getdt() {
-  dT = ( (float) accel_t_gyro.value.temperature + 12412.0) / 340.0;
-}
-void gy521::GetAccGyro() {
+void gy521::GetData() {
+  //Data Read
+  //データは以下の順番で送信される(14バイト)
+  //加速度センサの数値(x,y,z) → 温度 → ジャイロセンサの数値(x,y,z)
   error = MPU6050_read (MPU6050_ACCEL_XOUT_H, (uint8_t *) &accel_t_gyro, sizeof(accel_t_gyro));
+
+  dT = ( (float) accel_t_gyro.value.temperature + 12412.0) / 340.0;
+  
   uint8_t swap;
 #define SWAP(x,y) swap = x; x = y; y = swap
   SWAP (accel_t_gyro.reg.x_accel_h, accel_t_gyro.reg.x_accel_l);
@@ -36,6 +39,7 @@ void gy521::GetAccGyro() {
   SWAP (accel_t_gyro.reg.y_gyro_h, accel_t_gyro.reg.y_gyro_l);
   SWAP (accel_t_gyro.reg.z_gyro_h, accel_t_gyro.reg.z_gyro_l);
 
+  //GY-521から取得したデータを変換
   acc_x = accel_t_gyro.value.x_accel / 16384.0; //FS_SEL_0 16,384 LSB / g
   acc_y = accel_t_gyro.value.y_accel / 16384.0;
   acc_z = accel_t_gyro.value.z_accel / 16384.0;
