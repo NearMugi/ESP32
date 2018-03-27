@@ -4,12 +4,6 @@
 #include "MPU6050_Manage.h"
 MPU6050_Manage mpu_main;
 
-void setting(){
-  Nefry.disableWifi();  // WiFi無効にすると高速起動する
-}
-NefrySetting nefrySetting(setting);
-
-
 const unsigned int LOOP_TIME_US = 10000;  //ループ関数の周期(μsec)
 int processingTime; //loopの頭から最後までの処理時間
 
