@@ -17,6 +17,7 @@ String getPageSource(char host[]) {
   HTTPClient http;
 
   http.begin(host);
+//  http.begin("192.168.0.9", 8000, "/"); //うまくいかない。
   int httpCode = http.GET();
 
   String result = "";
