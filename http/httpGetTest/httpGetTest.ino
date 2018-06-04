@@ -1,7 +1,7 @@
 #include <Nefry.h>
 #include <HTTPClient.h>
 
-const char URL[] = "http://192.168.0.9:8000";  //"http://unkou.keikyu.co.jp/" なら取得できる
+const char URL[] = "http://192.168.0.9:8000/data";  //"http://unkou.keikyu.co.jp/" なら取得できる
 
 void setup() {
   String result1 = getPageSource((char*)URL);
