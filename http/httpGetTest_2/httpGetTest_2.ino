@@ -6,7 +6,7 @@
 
 
 #define DELAY_TIME 5000
-const char* host = "192.168.0.2"; //ここにサーバーホストを指定
+const char* host = "192.168.0.9"; //ここにサーバーホストを指定
 const char* page = "/";
 
 void setup() {
