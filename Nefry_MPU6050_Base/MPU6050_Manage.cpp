@@ -24,13 +24,16 @@
   ===============================================
 */
 
-#include "Nefry_I2Cdev.h"
-#include "Nefry_MPU6050_6Axis_MotionApps20.h"
+#include "I2Cdev.h"
+#include "MPU6050_6Axis_MotionApps20.h"
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
 #include "Wire.h"
 #endif
+
 #include "MPU6050_Manage.h"
-Nefry_MPU6050 mpu;
+#include "MPU6050_Calibration.h"
+MPU6050 mpu;
+MPU6050_Calibration cal;
 
 // orientation/motion vars
 Quaternion q;           // [w, x, y, z]         quaternion container
@@ -50,10 +53,14 @@ uint8_t fifoBuffer[64]; // FIFO storage buffer
 // packet structure for InvenSense teapot demo
 uint8_t teapotPacket[14] = { '$', 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0x00, 0x00, '\r', '\n' };
 
-#include "MPU6050_Calibration.h"
-MPU6050_Calibration cal;
+String ErrMsg;
 
-void MPU6050_Manage::init() {
+void MPU6050_Manage::reset(){
+  isFinishInitialize = false;
+}
+
+void MPU6050_Manage::init(bool _isCalibration, int _ofs[4]) {
+  isFinishInitialize = false;
   // join I2C bus (I2Cdev library doesn't do this automatically)
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
   Wire.begin();
@@ -69,31 +76,42 @@ void MPU6050_Manage::init() {
   // verify connection
   Serial.println(F("Testing device connections..."));
   Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
-  
+
+
 
   //Calibration
-  Serial.println("\n[Start Calibration]");
-  bool isEnd = false;
-  cal.init(mpu);
-  while (!isEnd) {
-    isEnd = cal.main();
+  if (_isCalibration) {
+    Serial.println("\n[Start Calibration]");
+    bool isEnd = false;
+    cal.init(mpu);
+    while (!isEnd) {
+      isEnd = cal.main();
+    }
+    CalOfs[0] = cal.GetOfs_GyroX();
+    CalOfs[1] = cal.GetOfs_GyroY();
+    CalOfs[2] = cal.GetOfs_GyroZ();
+    CalOfs[3] = cal.GetOfs_AcelZ();
+  } else {
+    CalOfs[0] = _ofs[0];
+    CalOfs[1] = _ofs[1];
+    CalOfs[2] = _ofs[2];
+    CalOfs[3] = _ofs[3];
   }
-
   // load and configure the DMP
   Serial.println(F("Initializing DMP..."));
   devStatus = mpu.dmpInitialize();
 
   // supply your own gyro offsets here, scaled for min sensitivity
   String msg = "[Set Offset]\t";
-  msg += "Gyro X : " + String(cal.GetOfs_GyroX()) +"\t";
-  msg += "Gyro Y : " + String(cal.GetOfs_GyroY()) +"\t";
-  msg += "Gyro Z : " + String(cal.GetOfs_GyroZ()) +"\t";
-  msg += "Acel Z : " + String(cal.GetOfs_AcelZ());
+  msg += "Gyro X : " + String(CalOfs[0]) + "\t";
+  msg += "Gyro Y : " + String(CalOfs[1]) + "\t";
+  msg += "Gyro Z : " + String(CalOfs[2]) + "\t";
+  msg += "Acel Z : " + String(CalOfs[3]);
   Serial.println(msg);
-  mpu.setXGyroOffset(cal.GetOfs_GyroX());
-  mpu.setYGyroOffset(cal.GetOfs_GyroY());
-  mpu.setZGyroOffset(cal.GetOfs_GyroZ());
-  mpu.setZAccelOffset(cal.GetOfs_AcelZ());
+  mpu.setXGyroOffset(CalOfs[0]);
+  mpu.setYGyroOffset(CalOfs[1]);
+  mpu.setZGyroOffset(CalOfs[2]);
+  mpu.setZAccelOffset(CalOfs[3]);
 
   // make sure it worked (returns 0 if so)
   if (devStatus == 0) {
@@ -119,11 +137,17 @@ void MPU6050_Manage::init() {
     Serial.print(devStatus);
     Serial.println(F(")"));
   }
+
+  isFinishInitialize = true;
 }
 
 void MPU6050_Manage::updateValue() {
+  ErrMsg ="";
   // if programming failed, don't try to do anything
-  if (!dmpReady) return;
+  if (!dmpReady) {
+    ErrMsg ="DMP Not Ready";
+    return;
+  }
 
   //get INT_STATUS byte
   mpuIntStatus = mpu.getIntStatus();
@@ -135,7 +159,7 @@ void MPU6050_Manage::updateValue() {
   if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
     // reset so we can continue cleanly
     mpu.resetFIFO();
-    Serial.println(F("FIFO overflow!"));
+    ErrMsg = F("FIFO overflow!");
 
     // otherwise, check for DMP data ready interrupt (this should happen frequently)
   } else if (mpuIntStatus & 0x02) {
@@ -159,40 +183,33 @@ void MPU6050_Manage::updateValue() {
   }
 }
 
-void MPU6050_Manage::DebugPrint() {
-#ifdef OUTPUT_READABLE_YAWPITCHROLL
-  // display Euler angles in degrees
-  Serial.print("ypr,");
-  Serial.print(ypr[0] * 180 / M_PI);
-  Serial.print(",");
-  Serial.print(ypr[1] * 180 / M_PI);
-  Serial.print(",");
-  Serial.println(ypr[2] * 180 / M_PI);
-#endif
+void MPU6050_Manage::Get_EulerAngle(float v[3]) {
+  v[0] = ypr[0] * 180 / M_PI;
+  v[1] = ypr[1] * 180 / M_PI;
+  v[2] = ypr[2] * 180 / M_PI;
+}
 
-#ifdef OUTPUT_READABLE_REALACCEL
-  // display real acceleration, adjusted to remove gravity
-  Serial.print("areal,");
-  Serial.print(aaReal.x);
-  Serial.print(",");
-  Serial.print(aaReal.y);
-  Serial.print(",");
-  Serial.println(aaReal.z);
-#endif
+void MPU6050_Manage::Get_Quaternion(float v[4]) {
+  v[0] = q.w;
+  v[1] = q.x;
+  v[2] = q.y;
+  v[3] = q.z;
+}
 
-#ifdef OUTPUT_READABLE_WORLDACCEL
-  // display initial world-frame acceleration, adjusted to remove gravity
-  // and rotated based on known orientation from quaternion
-  Serial.print("aworld,");
-  Serial.print(aaWorld.x);
-  Serial.print(",");
-  Serial.print(aaWorld.y);
-  Serial.print(",");
-  Serial.println(aaWorld.z);
-#endif
+void MPU6050_Manage::Get_RealAccel(int v[3]) {
+  v[0] = aaReal.x;
+  v[1] = aaReal.y;
+  v[2] = aaReal.z;
+}
 
-#ifdef OUTPUT_TEAPOT
-  // display quaternion values in InvenSense Teapot demo format:
+void MPU6050_Manage::Get_WorldAccel(int v[3]) {
+  v[0] = aaWorld.x;
+  v[1] = aaWorld.y;
+  v[2] = aaWorld.z;
+}
+
+void MPU6050_Manage::Get_teapotPacket(uint8_t v[14]) {
+
   teapotPacket[2] = fifoBuffer[0];
   teapotPacket[3] = fifoBuffer[1];
   teapotPacket[4] = fifoBuffer[4];
@@ -201,8 +218,14 @@ void MPU6050_Manage::DebugPrint() {
   teapotPacket[7] = fifoBuffer[9];
   teapotPacket[8] = fifoBuffer[12];
   teapotPacket[9] = fifoBuffer[13];
-  Serial.write(teapotPacket, 14);
   teapotPacket[11]++; // packetCount, loops at 0xFF on purpose
-#endif
+
+  for (int i = 0; i < 14; i++) {
+    v[i] = teapotPacket[i];
+  }
+}
+
+String MPU6050_Manage::GetErrMsg(){
+  return ErrMsg;
 }
 

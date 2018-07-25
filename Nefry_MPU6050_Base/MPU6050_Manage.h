@@ -1,17 +1,20 @@
 #ifndef __MPU6050_MANAGE_H
 #define __MPU6050_MANAGE_H
 
-//#define OUTPUT_READABLE_YAWPITCHROLL
-#define OUTPUT_READABLE_REALACCEL
-//#define OUTPUT_READABLE_WORLDACCEL
-#define OUTPUT_TEAPOT
-
 class MPU6050_Manage {
   public:
-    void init();
+    void reset();
+    void init(bool _isCalibration, int _ofs[4]);
     void updateValue();
-    void DebugPrint();
-
+    void Get_EulerAngle(float v[3]);
+    void Get_Quaternion(float v[4]);
+    void Get_RealAccel(int v[3]);
+    void Get_WorldAccel(int v[3]);
+    void Get_teapotPacket(uint8_t v[14]);
+    String GetErrMsg();
+    
+    int CalOfs[4];  //Gyro x,y,z, Accel z
+    bool isFinishInitialize;
   private:
 };
 

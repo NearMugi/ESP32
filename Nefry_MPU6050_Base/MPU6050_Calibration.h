@@ -3,8 +3,8 @@
 
 class MPU6050_Calibration {
   public:
-    Nefry_MPU6050 accelgyro;
-    void init(Nefry_MPU6050 _accelgyro);
+    MPU6050 accelgyro;
+    void init(MPU6050 _accelgyro);
     bool main();
 
     int GetOfs_GyroX();

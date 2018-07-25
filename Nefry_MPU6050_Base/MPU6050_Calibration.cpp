@@ -1,10 +1,9 @@
-#include "Nefry_I2Cdev.h"
-#include "Nefry_MPU6050.h"
+#include "I2Cdev.h"
+#include "MPU6050.h"
 #include "Wire.h"
-
 #include "MPU6050_Calibration.h"
 
-void MPU6050_Calibration::init(Nefry_MPU6050 _accelgyro) {
+void MPU6050_Calibration::init(MPU6050 _accelgyro) {
   accelgyro = _accelgyro;
   buffersize = 1000;
   acel_deadzone = 8;
@@ -52,6 +51,7 @@ bool MPU6050_Calibration::main() {
     meansensors();
     isEnd = true;
     Serial.println("FINISHED!");
+#if true
     Serial.print("Sensor readings with offsets:\t");
     String msg = String(mean_ax) + "\t";
     msg += String(mean_ay) + "\t";
@@ -72,6 +72,7 @@ bool MPU6050_Calibration::main() {
     Serial.println("If calibration was succesful write down your offsets so you can set them in your projects using something similar to mpu.setXAccelOffset(youroffset)");
 
     Serial.println("");
+#endif
   }
 
 
@@ -86,7 +87,7 @@ void MPU6050_Calibration::meansensors() {
   while (i < (buffersize + 101)) {
     // read raw accel/gyro measurements from device
     accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
-    
+
     if (i > 100 && i <= (buffersize + 100)) { //First 100 measures are discarded
       buff_ax = buff_ax + ax;
       buff_ay = buff_ay + ay;
@@ -128,6 +129,7 @@ void MPU6050_Calibration::calibration() {
 
     meansensors();
     Serial.println("...");
+
     if (abs(mean_ax) <= acel_deadzone) ready++;
     else ax_offset = ax_offset - mean_ax / acel_deadzone;
 
@@ -146,7 +148,6 @@ void MPU6050_Calibration::calibration() {
     if (abs(mean_gz) <= giro_deadzone) ready++;
     else gz_offset = gz_offset - mean_gz / (giro_deadzone + 1);
 
-    Serial.println(ready);
     if (ready == 6) break;
   }
 }

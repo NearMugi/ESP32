@@ -2,17 +2,10 @@
 //MPU-6050 Accelerometer + Gyro
 #include <Nefry.h>
 #include <NefryDisplay.h>
-#include <NefrySetting.h>
 
 #include "GY521.h"
 
 gy521 _gy521;
-
-void setting() {
-  Nefry.disableWifi();  //Wifi無効
-  Nefry.disableDisplayStatus();//Wifi接続時のステータスを非表示にする
-}
-NefrySetting nefrySetting(setting);
 
 const unsigned int LOOP_TIME_US = 10000;  //ループ関数の周期(μsec)
 int processingTime; //loopの頭から最後までの処理時間
