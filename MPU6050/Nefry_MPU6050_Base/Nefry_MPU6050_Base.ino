@@ -6,9 +6,8 @@
 #include <NefryDisplay.h>
 #include <NefrySetting.h>
 void setting(){
-  Serial.println("TestSetting");
   Nefry.disableDisplayStatus();
-  Nefry.disableWifi();
+  //Nefry.disableWifi();
 }
 NefrySetting nefrySetting(setting);
 
@@ -29,7 +28,7 @@ int mpu6050_RealAccel[3];        //[x,y,z]
 int mpu6050_WorldAccel[3];       //[x,y,z]
 uint8_t mpu6050_teapotPacket[14];
 
-const unsigned int LOOP_TIME_US = 10000;  //ループ関数の周期(μsec)
+const unsigned int LOOP_TIME_US = 20000;  //ループ関数の周期(μsec)
 int processingTime; //loopの頭から最後までの処理時間
 
 void DispNefryDisplay() {
@@ -38,20 +37,28 @@ void DispNefryDisplay() {
   //取得したデータをディスプレイに表示
   NefryDisplay.setFont(ArialMT_Plain_10);
 
-  text = mpu_main.GetErrMsg();
-  NefryDisplay.drawString(0, 0, text);
+  NefryDisplay.drawString(0, 0, mpu_main.GetErrMsg());
 
-  text = "[ANG]";
-  text += String(mpu6050_EulerAngle[0]);
+  text = "[Ofs]";
+  text +=String(CalOfs[0]);
   text += ",";
-  text += String(mpu6050_EulerAngle[1]);
+  text +=String(CalOfs[1]);
   text += ",";
-  text += String(mpu6050_EulerAngle[2]);
-  NefryDisplay.drawString(0, 15, text);
-
+  text +=String(CalOfs[2]);
+  text += ",";
+  text +=String(CalOfs[3]);
+  NefryDisplay.drawString(0, 10, text);
   
+  NefryDisplay.drawString(0, 20, "[ANGLE]");
+  NefryDisplay.drawString(0, 30, "X : ");
+  NefryDisplay.drawString(15, 30, String(mpu6050_EulerAngle[0]));
+  NefryDisplay.drawString(0, 40, "Y : ");
+  NefryDisplay.drawString(15, 40, String(mpu6050_EulerAngle[1]));
+  NefryDisplay.drawString(0, 50, "Z : ");
+  NefryDisplay.drawString(15, 50, String(mpu6050_EulerAngle[2]));
+
   NefryDisplay.display();
-  Nefry.ndelay(10);
+  Nefry.ndelay(20);
 }
 
 void setup() {
