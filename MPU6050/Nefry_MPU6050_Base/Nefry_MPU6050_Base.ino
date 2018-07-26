@@ -4,6 +4,14 @@
 //SDA -> A4
 #include <Nefry.h>
 #include <NefryDisplay.h>
+#include <NefrySetting.h>
+void setting(){
+  Serial.println("TestSetting");
+  Nefry.disableDisplayStatus();
+  Nefry.disableWifi();
+}
+NefrySetting nefrySetting(setting);
+
 #include "MPU6050_Manage.h"
 MPU6050_Manage mpu_main;
 
@@ -47,15 +55,19 @@ void DispNefryDisplay() {
 }
 
 void setup() {
-  Serial.begin(115200);
+  NefryDisplay.begin();
   NefryDisplay.setAutoScrollFlg(true);//自動スクロールを有効
-
-  //キャリブレーションする必要ない場合はオフセットを渡す
+  
+  NefryDisplay.clear();
+  NefryDisplay.display();
+  Nefry.ndelay(10);
+  
+  //キャリブレーションする必要ない場合は指定したオフセットを渡す
   isCalibration = false;
-  CalOfs[0] = 167;
-  CalOfs[1] = -27;
-  CalOfs[2] = -18;
-  CalOfs[3] = 1072;
+  CalOfs[0] = -263;
+  CalOfs[1] = -36;
+  CalOfs[2] = -13;
+  CalOfs[3] = 1149;
   mpu_main.init(isCalibration, CalOfs);
   
 }

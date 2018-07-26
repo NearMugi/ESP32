@@ -23,7 +23,8 @@
   THE SOFTWARE.
   ===============================================
 */
-
+#include <Nefry.h>
+#include <NefryDisplay.h>
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
@@ -55,11 +56,17 @@ uint8_t teapotPacket[14] = { '$', 0x02, 0, 0, 0, 0, 0, 0, 0, 0, 0x00, 0x00, '\r'
 
 String ErrMsg;
 
-void MPU6050_Manage::reset(){
+void MPU6050_Manage::reset() {
   isFinishInitialize = false;
 }
 
 void MPU6050_Manage::init(bool _isCalibration, int _ofs[4]) {
+
+  String text;
+  //取得したデータをディスプレイに表示
+  NefryDisplay.setFont(ArialMT_Plain_10);
+
+
   isFinishInitialize = false;
   // join I2C bus (I2Cdev library doesn't do this automatically)
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
@@ -70,18 +77,30 @@ void MPU6050_Manage::init(bool _isCalibration, int _ofs[4]) {
 #endif
 
   // initialize device
-  Serial.println(F("Initializing I2C devices..."));
+  //Serial.println(F("Initializing I2C devices..."));
   mpu.initialize();
 
   // verify connection
-  Serial.println(F("Testing device connections..."));
-  Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
+  //Serial.println(F("Testing device connections..."));
 
+  if (mpu.testConnection()) {
+    text = F("MPU6050 connection successful");
+  } else {
+    text = F("MPU6050 connection failed");
+  }
+  Serial.println(text);
+  NefryDisplay.drawString(0, 0, text);
+  NefryDisplay.display();
+  Nefry.ndelay(10);
 
 
   //Calibration
   if (_isCalibration) {
     Serial.println("\n[Start Calibration]");
+    NefryDisplay.drawString(0, 30, F("Start Calibration..."));
+    NefryDisplay.display();
+    Nefry.ndelay(10);
+
     bool isEnd = false;
     cal.init(mpu);
     while (!isEnd) {
@@ -91,6 +110,10 @@ void MPU6050_Manage::init(bool _isCalibration, int _ofs[4]) {
     CalOfs[1] = cal.GetOfs_GyroY();
     CalOfs[2] = cal.GetOfs_GyroZ();
     CalOfs[3] = cal.GetOfs_AcelZ();
+    NefryDisplay.drawString(0, 40, F("End Calibration!"));
+    NefryDisplay.display();
+    Nefry.ndelay(10);
+
   } else {
     CalOfs[0] = _ofs[0];
     CalOfs[1] = _ofs[1];
@@ -98,7 +121,7 @@ void MPU6050_Manage::init(bool _isCalibration, int _ofs[4]) {
     CalOfs[3] = _ofs[3];
   }
   // load and configure the DMP
-  Serial.println(F("Initializing DMP..."));
+  // Serial.println(F("Initializing DMP..."));
   devStatus = mpu.dmpInitialize();
 
   // supply your own gyro offsets here, scaled for min sensitivity
@@ -113,10 +136,11 @@ void MPU6050_Manage::init(bool _isCalibration, int _ofs[4]) {
   mpu.setZGyroOffset(CalOfs[2]);
   mpu.setZAccelOffset(CalOfs[3]);
 
+
   // make sure it worked (returns 0 if so)
   if (devStatus == 0) {
     // turn on the DMP, now that it's ready
-    Serial.println(F("Enabling DMP..."));
+    //  Serial.println(F("Enabling DMP..."));
     mpu.setDMPEnabled(true);
 
     // enable Arduino interrupt detection
@@ -128,6 +152,14 @@ void MPU6050_Manage::init(bool _isCalibration, int _ofs[4]) {
 
     // get expected DMP packet size for later comparison
     packetSize = mpu.dmpGetFIFOPacketSize();
+
+    NefryDisplay.clear();
+    NefryDisplay.drawString(0, 0, F("DMP ready!"));
+    NefryDisplay.drawString(0, 10, F("packetSize:"));
+    NefryDisplay.drawString(70, 10, String(packetSize));
+    NefryDisplay.display();
+    Nefry.ndelay(3000);
+
   } else {
     // ERROR!
     // 1 = initial memory load failed
@@ -142,44 +174,39 @@ void MPU6050_Manage::init(bool _isCalibration, int _ofs[4]) {
 }
 
 void MPU6050_Manage::updateValue() {
-  ErrMsg ="";
+  ErrMsg = "";
   // if programming failed, don't try to do anything
   if (!dmpReady) {
-    ErrMsg ="DMP Not Ready";
+    ErrMsg = "DMP Not Ready";
     return;
   }
 
   //get INT_STATUS byte
   mpuIntStatus = mpu.getIntStatus();
 
-  // get current FIFO count
-  while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
-
-  // check for overflow (this should never happen unless our code is too inefficient)
-  if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
-    // reset so we can continue cleanly
-    mpu.resetFIFO();
-    ErrMsg = F("FIFO overflow!");
-
-    // otherwise, check for DMP data ready interrupt (this should happen frequently)
-  } else if (mpuIntStatus & 0x02) {
-    // wait for correct available data length, should be a VERY short wait
-    while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
-
-    // read a packet from FIFO
-    mpu.getFIFOBytes(fifoBuffer, packetSize);
-
-    // track FIFO count here in case there is > 1 packet available
-    // (this lets us immediately read more without waiting for an interrupt)
-    fifoCount -= packetSize;
-
-
-    mpu.dmpGetQuaternion(&q, fifoBuffer);
-    mpu.dmpGetGravity(&gravity, &q);
-    mpu.dmpGetAccel(&aa, fifoBuffer);
-    mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
-    mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
-    mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+  if (mpuIntStatus & 0x12)
+  {
+    // FIFOのデータサイズを取得
+    const uint16_t fifoCount = mpu.getFIFOCount();
+    if ((mpuIntStatus & 0x10) || (1024 <= fifoCount))
+    {
+      // オーバーフローを検出したらFIFOをリセット(そもそも検出されないコトあり…)
+      mpu.resetFIFO();
+      Serial.println(F("FIFO overflow!"));
+      ErrMsg = F("FIFO overflow!");
+    }
+    else if ((mpuIntStatus & 0x02) && (packetSize <= fifoCount))
+    {
+      // データの読み出し可能
+      // FIFOよりデータを読み出す
+      mpu.getFIFOBytes(fifoBuffer, packetSize);
+      mpu.dmpGetQuaternion(&q, fifoBuffer);
+      mpu.dmpGetGravity(&gravity, &q);
+      mpu.dmpGetAccel(&aa, fifoBuffer);
+      mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
+      mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
+      mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+    }
   }
 }
 
@@ -225,7 +252,7 @@ void MPU6050_Manage::Get_teapotPacket(uint8_t v[14]) {
   }
 }
 
-String MPU6050_Manage::GetErrMsg(){
+String MPU6050_Manage::GetErrMsg() {
   return ErrMsg;
 }
 
