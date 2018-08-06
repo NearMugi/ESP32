@@ -1,16 +1,28 @@
 #include <Nefry.h>
 #include <NefryDisplay.h>
 #include <PubSubClient.h>
+#include <ArduinoJson.h>
+
+#include <time.h>
+#define JST     3600*9
+
+#include <NefrySetting.h>
+void setting(){
+  Nefry.disableDisplayStatus();
+}
+NefrySetting nefrySetting(setting);
 
 String mqtt_server;
 
 #define BBT "mqtt.beebotte.com"
 String bbt_token; 
+#define Channel "mpu6050"
+#define RES_Q "Quaternion"
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 long lastMsg = 0;
-char msg[50];
+char msg[100];
 int value = 0;
 
 #define MAX_MSGSIZE 20
@@ -34,7 +46,7 @@ void reconnect() {
     if (client.connect(clientId.c_str(), tmp, "")) {
       Serial.println("connected");
       // Once connected, publish an announcement...
-      client.publish("comment", "Coming Packets");
+      //client.publish("comment", "Coming Packets");
       client.subscribe("res");
     } else {
       Serial.print("failed, rc=");
@@ -57,7 +69,16 @@ void callback(char* topic, byte* payload, unsigned int length) {
 }
 
 void setup() {
-
+  Nefry.enableSW();
+  Nefry.setProgramName("BeeBotte Publish Submit Test");
+  
+  NefryDisplay.begin();
+  NefryDisplay.setAutoScrollFlg(true);//自動スクロールを有効
+  
+  NefryDisplay.clear();
+  NefryDisplay.display();
+  Nefry.ndelay(10);
+  
   client.setServer(BBT, 1883);
   client.setCallback(callback);
 
@@ -65,12 +86,12 @@ void setup() {
   Nefry.setStoreTitle("BeeBotte_Token", 1);
 //  mqtt_server = Nefry.getStoreStr(0);
   
-  Nefry.enableSW();
-  Nefry.setProgramName("BeeBotte Publish Submit Test");
-  NefryDisplay.autoScrollFunc(DisplayPrint);
+  configTime( JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
+
 }
 
 void loop() {
+  NefryDisplay.autoScrollFunc(DisplayPrint);
 
   if (!client.connected()) {
     reconnect();
@@ -79,16 +100,41 @@ void loop() {
 
   if (Nefry.readSW()){
     ++value;
-    snprintf (msg, 75, "hello world #%ld", value);
-    client.publish("comment", msg);    
+    snprintf (msg, 75, "%ld,10,20,9", value);
+    publish(RES_Q, msg);
   }
 }
 
 void DisplayPrint(){
+  NefryDisplay.clear();
   NefryDisplay.drawString(0, 0, "Publish msg");
   NefryDisplay.drawString(0, 15, (String)msg);
   
   NefryDisplay.drawString(0, 30, "Submit msg");
   NefryDisplay.drawString(0, 45, (String)getPayload);
+  
+  NefryDisplay.display();
+  Nefry.ndelay(20);
+  
+}
+
+void publish(const char* resource, String data)
+{
+    StaticJsonBuffer<128> jsonOutBuffer;
+    JsonObject& root = jsonOutBuffer.createObject();
+    root["data"] = data;
+    root["ispublic"] = true;
+    root["ts"] = time(NULL) ; 
+
+    // Now print the JSON into a char buffer
+    char buffer[128];
+    root.printTo(buffer, sizeof(buffer));
+
+    // Create the topic to publish to
+    char topic[64];
+    sprintf(topic, "%s/%s", Channel, resource);
+
+    // Now publish the char buffer to Beebotte
+    client.publish(topic, buffer);
 }
 
