@@ -70,7 +70,7 @@ void setup() {
   Nefry.ndelay(10);
   
   //キャリブレーションする必要ない場合は指定したオフセットを渡す
-  isCalibration = false;
+  isCalibration = true;
   CalOfs[0] = -263;
   CalOfs[1] = -36;
   CalOfs[2] = -13;

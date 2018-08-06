@@ -201,11 +201,11 @@ void MPU6050_Manage::updateValue() {
       // FIFOよりデータを読み出す
       mpu.getFIFOBytes(fifoBuffer, packetSize);
       mpu.dmpGetQuaternion(&q, fifoBuffer);
-      mpu.dmpGetGravity(&gravity, &q);
-      mpu.dmpGetAccel(&aa, fifoBuffer);
-      mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
-      mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
-      mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+      //mpu.dmpGetGravity(&gravity, &q);
+      //mpu.dmpGetAccel(&aa, fifoBuffer);
+      //mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
+      //mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
+      //mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
     }
   }
 }

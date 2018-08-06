@@ -24,14 +24,8 @@ bool isCalibration;
 int CalOfs[4] = {0, 0, 0, 0}; //Gyro x,y,z, Accel z
 
 //MPU6050から取得するデータ
-float mpu6050_EulerAngle[3];  //[x,y,z]
 float mpu6050_Quaternion[4];  //[w,x,y,z]
-int mpu6050_RealAccel[3];        //[x,y,z]
-int mpu6050_WorldAccel[3];       //[x,y,z]
-uint8_t mpu6050_teapotPacket[14];
-
-const unsigned int LOOP_TIME_US = 20000;  //ループ関数の周期(μsec)
-int processingTime; //loopの頭から最後までの処理時間
+String sendData_Quaternion = "@1,@2,@3,@4";
 
 String mqtt_server;
 
@@ -39,7 +33,8 @@ String mqtt_server;
 String bbt_token; 
 #define Channel "mpu6050"
 #define RES_Q "Quaternion"
-
+char topic[64];
+    
 WiFiClient espClient;
 PubSubClient client(espClient);
 long lastMsg = 0;
@@ -95,11 +90,10 @@ void DispNefryDisplay() {
   String text;
   //取得したデータをディスプレイに表示
   NefryDisplay.setFont(ArialMT_Plain_10);
-  NefryDisplay.drawString(0, 0, "Publish msg");
-  NefryDisplay.drawString(0, 15, (String)msg);
+  NefryDisplay.drawString(0, 0, (String)msg);
   
   NefryDisplay.display();
-  Nefry.ndelay(20);
+  Nefry.ndelay(100);
 }
 
 void setup() {
@@ -122,16 +116,17 @@ void setup() {
   client.setServer(BBT, 1883);
   client.setCallback(callback);
 
+  // Create the topic to publish to
+  sprintf(topic, "%s/%s", Channel, RES_Q);
+    
   Nefry.setStoreTitle("MQTTServerIP", 0); //mosquitto用なので今回は使わない。
   Nefry.setStoreTitle("BeeBotte_Token", 1);
-//  mqtt_server = Nefry.getStoreStr(0);
+  NefryDisplay.autoScrollFunc(DispNefryDisplay);
 
 }
 
 void loop() {
-  NefryDisplay.autoScrollFunc(DispNefryDisplay);
 
-  processingTime = micros();
   mpu_main.updateValue();
   mpu_main.Get_Quaternion(mpu6050_Quaternion);
 
@@ -139,30 +134,18 @@ void loop() {
     reconnect();
   }
   client.loop();
-
-  msg = String(mpu6050_Quaternion[0]);
-  msg +=",";
-  msg += String(mpu6050_Quaternion[1]);
-  msg +=",";
-  msg += String(mpu6050_Quaternion[2]);
-  msg +=",";
-  msg += String(mpu6050_Quaternion[3]);
+  
+  msg = sendData_Quaternion;
+  msg.replace("@1", String(mpu6050_Quaternion[0]));
+  msg.replace("@2", String(mpu6050_Quaternion[1]));
+  msg.replace("@3", String(mpu6050_Quaternion[2]));
+  msg.replace("@4", String(mpu6050_Quaternion[3]));
   
   publish(RES_Q, msg);
-  
-  //一連の処理にかかった時間を考慮して待ち時間を設定する
-  wait_ConstantLoop();
+
+  delay(100);
 }
 
-void wait_ConstantLoop() {
-  processingTime = micros() - processingTime;
-  long loopWaitTime = LOOP_TIME_US - processingTime;
-
-  if (loopWaitTime < 0)  return;
-
-  long start_time = micros();
-  while ( micros() - start_time < loopWaitTime) {};
-}
 
 void publish(const char* resource, String data)
 {
@@ -170,15 +153,11 @@ void publish(const char* resource, String data)
     JsonObject& root = jsonOutBuffer.createObject();
     root["data"] = data;
     root["ispublic"] = true;
-    root["ts"] = time(NULL) ; 
+    root["ts"] = 0; 
 
     // Now print the JSON into a char buffer
     char buffer[128];
     root.printTo(buffer, sizeof(buffer));
-
-    // Create the topic to publish to
-    char topic[64];
-    sprintf(topic, "%s/%s", Channel, resource);
 
     // Now publish the char buffer to Beebotte
     client.publish(topic, buffer);
