@@ -3,6 +3,20 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 
+long nowTime;
+
+#define PIN_DIGITAL_SW D8
+#define LOOP_TIME_US 10000  //ループ時間(us)
+#define MAX_CNT 5
+#define WAIT_NEXTTIME_US 5000000 //publishからの待ち時間(us)
+long lpTime;
+int cntOn;
+bool sw;
+long waitTime; //一度publishしてからの待ち時間
+
+
+
+
 #include <time.h>
 #define JST     3600*9
 
@@ -23,13 +37,11 @@ char topic[64];
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-String msg;
 
-#define MAX_MSGSIZE 20
-String getTopic;
-char getPayload[MAX_MSGSIZE];
-
+//NefryDisplayMessage
 String MsgMqtt;
+String MsgSw;
+String MsgPublishData;
 
 void reconnect() {
   Serial.print("Attempting MQTT connection...");
@@ -52,31 +64,21 @@ void reconnect() {
   }
 }
 
-void callback(char* topic, byte* payload, unsigned int length) {
-  getTopic = (String)topic;
-  for (int i = 0; i < MAX_MSGSIZE; i++) {
-    getPayload[i] = '\0';
-  }
-  for (int i = 0; i < length; i++) {
-    getPayload[i] = (char)payload[i];
-  }
-}
-
 void DispNefryDisplay() {
   NefryDisplay.clear();
   String text;
   //取得したデータをディスプレイに表示
   NefryDisplay.setFont(ArialMT_Plain_10);
   NefryDisplay.drawString(0, 0, MsgMqtt);
-  NefryDisplay.drawString(0, 15, msg);
+  NefryDisplay.drawString(0, 10, MsgSw);
+  NefryDisplay.drawString(0, 20, MsgPublishData);
 
   NefryDisplay.display();
   Nefry.ndelay(10);
 }
 
 void setup() {
-  Nefry.enableSW();
-  Nefry.setProgramName("BeeBotte Publish Submit Test");
+  Nefry.setProgramName("Trigger FoodMenu");
 
   NefryDisplay.begin();
   NefryDisplay.setAutoScrollFlg(true);//自動スクロールを有効
@@ -86,29 +88,56 @@ void setup() {
   Nefry.ndelay(10);
 
   client.setServer(BBT, 1883);
-  client.setCallback(callback);
 
   sprintf(topic, "%s/%s", Channel, Res);
 
   Nefry.setStoreTitle("MQTTServerIP", 0); //mosquitto用なので今回は使わない。
   Nefry.setStoreTitle("BeeBotte_Token", 1);
-  //  mqtt_server = Nefry.getStoreStr(0);
 
   NefryDisplay.autoScrollFunc(DispNefryDisplay);
 
   configTime( JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
 
+  //switch
+  pinMode(PIN_DIGITAL_SW, INPUT);
+  lpTime = 0;
+  cntOn = 0;
+  sw = false;
+  waitTime = 0;
+  MsgSw = "";
 }
 
 void loop() {
-
+  nowTime = micros();
   if (!client.connected()) reconnect();
 
-  if (Nefry.readSW()) {
-    msg = "Switch On";
-    if (client.connected()) {
-      client.loop();
-      publish(Res, msg);
+  //switch and publish
+  if ((nowTime - lpTime) >  LOOP_TIME_US) {
+    lpTime = micros();
+    //スイッチがON
+    if (sw) {
+      MsgSw = "[Switch On ]";
+      //次のPublish送信が有効になるまで待ち
+      if ((nowTime - waitTime) > WAIT_NEXTTIME_US) {
+        sw = false;
+        cntOn = 0;
+      } else {
+        MsgSw = "Wait Next Time";
+      }
+    } else {
+      MsgSw = "[Switch Off]";
+      if (digitalRead(PIN_DIGITAL_SW)) {
+        if (++cntOn >= MAX_CNT) {
+          //スイッチがONになったタイミングでPublish
+          sw = true;
+          waitTime = micros();
+          
+          publish(Res, "1");
+        }
+      } else {
+        sw = false;
+        cntOn = 0;
+      }
     }
   }
 
@@ -125,7 +154,9 @@ void publish(const char* resource, String data)
   // Now print the JSON into a char buffer
   char buffer[128];
   root.printTo(buffer, sizeof(buffer));
-
+  
+  MsgPublishData = String(buffer);
+   
   // Now publish the char buffer to Beebotte
   client.publish(topic, buffer, QoS);
 }
