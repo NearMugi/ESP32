@@ -3,6 +3,10 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 
+#define NEFRY_DATASTORE_MOSQUITTO 0
+#define NEFRY_DATASTORE_BEEBOTTE 1
+#define NEFRY_DATASTORE_BEEBOTTE_FOODMENU 2
+
 long nowTime;
 
 #define PIN_DIGITAL_SW D8
@@ -51,7 +55,7 @@ void reconnect() {
 
   //NefryのDataStoreに書き込んだToken(String)を(const char*)に変換
   bbt_token = "token:";
-  bbt_token += Nefry.getStoreStr(1);
+  bbt_token += Nefry.getStoreStr(NEFRY_DATASTORE_BEEBOTTE_FOODMENU);
   const char* tmp = bbt_token.c_str();
   // Attempt to connect
   if (client.connect(clientId.c_str(), tmp, "")) {
@@ -91,9 +95,10 @@ void setup() {
 
   sprintf(topic, "%s/%s", Channel, Res);
 
-  Nefry.setStoreTitle("MQTTServerIP", 0); //mosquitto用なので今回は使わない。
-  Nefry.setStoreTitle("BeeBotte_Token", 1);
-
+  Nefry.setStoreTitle("MQTTServerIP", NEFRY_DATASTORE_MOSQUITTO); //mosquitto用なので今回は使わない。
+  Nefry.setStoreTitle("BeeBotte_Token", NEFRY_DATASTORE_BEEBOTTE);
+  Nefry.setStoreTitle("BeeBotte_Token_FoodMenu", NEFRY_DATASTORE_BEEBOTTE_FOODMENU);
+  
   NefryDisplay.autoScrollFunc(DispNefryDisplay);
 
   configTime( JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
@@ -132,7 +137,7 @@ void loop() {
           sw = true;
           waitTime = micros();
           
-          publish(Res, "1");
+          publish();
         }
       } else {
         sw = false;
@@ -143,13 +148,23 @@ void loop() {
 
 }
 
-void publish(const char* resource, String data)
+void publish()
 {
+  //日付を取得する  
+  //※未対応仕様
+  //20時以降だった場合は翌日の日付にする。
+  //土日だった場合は月曜日の日付にする。
+  time_t  t = time(NULL);
+  struct tm *tm;
+  tm = localtime(&t);
+  int date = tm->tm_mday;
+
   StaticJsonBuffer<128> jsonOutBuffer;
   JsonObject& root = jsonOutBuffer.createObject();
-  root["data"] = data;
+
+  root["data"] = date;
   root["ispublic"] = true;
-  root["ts"] = time(NULL) ;
+  root["ts"] = t;
 
   // Now print the JSON into a char buffer
   char buffer[128];
