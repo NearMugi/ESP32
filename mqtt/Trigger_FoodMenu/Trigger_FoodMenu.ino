@@ -3,6 +3,8 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 
+String ipStr;
+
 #define NEFRY_DATASTORE_MOSQUITTO 0
 #define NEFRY_DATASTORE_BEEBOTTE 1
 #define NEFRY_DATASTORE_BEEBOTTE_FOODMENU 2
@@ -73,9 +75,10 @@ void DispNefryDisplay() {
   String text;
   //取得したデータをディスプレイに表示
   NefryDisplay.setFont(ArialMT_Plain_10);
-  NefryDisplay.drawString(0, 0, MsgMqtt);
-  NefryDisplay.drawString(0, 10, MsgSw);
-  NefryDisplay.drawString(0, 20, MsgPublishData);
+  NefryDisplay.drawString(0, 0, ipStr);
+  NefryDisplay.drawString(0, 10, MsgMqtt);
+  NefryDisplay.drawString(0, 20, MsgSw);
+  NefryDisplay.drawString(0, 30, MsgPublishData);
 
   NefryDisplay.display();
   Nefry.ndelay(10);
@@ -98,7 +101,7 @@ void setup() {
   Nefry.setStoreTitle("MQTTServerIP", NEFRY_DATASTORE_MOSQUITTO); //mosquitto用なので今回は使わない。
   Nefry.setStoreTitle("BeeBotte_Token", NEFRY_DATASTORE_BEEBOTTE);
   Nefry.setStoreTitle("BeeBotte_Token_FoodMenu", NEFRY_DATASTORE_BEEBOTTE_FOODMENU);
-  
+
   NefryDisplay.autoScrollFunc(DispNefryDisplay);
 
   configTime( JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
@@ -110,6 +113,9 @@ void setup() {
   sw = false;
   waitTime = 0;
   MsgSw = "";
+
+  IPAddress ip = WiFi.localIP();
+  ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
 }
 
 void loop() {
@@ -136,7 +142,7 @@ void loop() {
           //スイッチがONになったタイミングでPublish
           sw = true;
           waitTime = micros();
-          
+
           publish();
         }
       } else {
@@ -150,14 +156,31 @@ void loop() {
 
 void publish()
 {
-  //日付を取得する  
+  //日付を取得する
   //※未対応仕様
   //20時以降だった場合は翌日の日付にする。
   //土日だった場合は月曜日の日付にする。
   time_t  t = time(NULL);
   struct tm *tm;
   tm = localtime(&t);
-  int date = tm->tm_mday;
+  int mon = tm->tm_mon + 1;
+  int day = tm->tm_mday;
+  int wd = tm->tm_wday;
+  int hour = tm->tm_hour;
+
+  int plusDay = 0;
+  if (wd == 0) plusDay = 1;   //日曜日だった場合は月曜日の日付にする。
+  if (hour >= 20) plusDay = 1; //20時以降だった場合は翌日の日付にする。
+  if (wd == 6 && hour >= 20) plusDay = 2; //土曜日、かつ20時以降だった場合は月曜日の日付にする。
+  if (plusDay > 0) {
+    t += 86400 * plusDay;
+    tm = localtime(&t);
+    mon = tm->tm_mon + 1;
+    day = tm->tm_mday;
+  }
+
+  char date[5];
+  sprintf(date, "%02d,%2d", mon, day);
 
   StaticJsonBuffer<128> jsonOutBuffer;
   JsonObject& root = jsonOutBuffer.createObject();
@@ -169,9 +192,9 @@ void publish()
   // Now print the JSON into a char buffer
   char buffer[128];
   root.printTo(buffer, sizeof(buffer));
-  
+
   MsgPublishData = String(buffer);
-   
+
   // Now publish the char buffer to Beebotte
   client.publish(topic, buffer, QoS);
 }
