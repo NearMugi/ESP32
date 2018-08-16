@@ -1,11 +1,15 @@
-//VCC -> 5v
-//GND -> GND
-//SCL -> A5
-//SDA -> A4
 #include <Nefry.h>
 #include <NefryDisplay.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
+
+String ipStr;
+
+#define NEFRY_DATASTORE_MOSQUITTO 0
+#define NEFRY_DATASTORE_BEEBOTTE 1
+
+#include <time.h>
+#define JST     3600*9
 
 #include <NefrySetting.h>
 void setting() {
@@ -30,6 +34,7 @@ String sendData_Quaternion = "@1,@2,@3,@4";
 String mqtt_server;
 
 #define BBT "mqtt.beebotte.com"
+#define QoS 0
 String bbt_token;
 #define Channel "mpu6050"
 #define RES_Q "Quaternion"
@@ -54,7 +59,7 @@ void reconnect() {
 
   //NefryのDataStoreに書き込んだToken(String)を(const char*)に変換
   bbt_token = "token:";
-  bbt_token += Nefry.getStoreStr(1);
+  bbt_token += Nefry.getStoreStr(NEFRY_DATASTORE_BEEBOTTE);
   const char* tmp = bbt_token.c_str();
   // Attempt to connect
   if (client.connect(clientId.c_str(), tmp, "")) {
@@ -86,8 +91,9 @@ void DispNefryDisplay() {
   String text;
   //取得したデータをディスプレイに表示
   NefryDisplay.setFont(ArialMT_Plain_10);
-  NefryDisplay.drawString(0, 0, MsgMqtt);
-  NefryDisplay.drawString(0, 15, MsgMpu6050);
+  NefryDisplay.drawString(0, 0, ipStr);
+  NefryDisplay.drawString(0, 10, MsgMqtt);
+  NefryDisplay.drawString(0, 20, MsgMpu6050);
   NefryDisplay.drawString(0, 30, msg);
 
   NefryDisplay.display();
@@ -117,10 +123,14 @@ void setup() {
   // Create the topic to publish to
   sprintf(topic, "%s/%s", Channel, RES_Q);
 
-  Nefry.setStoreTitle("MQTTServerIP", 0); //mosquitto用なので今回は使わない。
-  Nefry.setStoreTitle("BeeBotte_Token", 1);
+  Nefry.setStoreTitle("MQTTServerIP", NEFRY_DATASTORE_MOSQUITTO); //mosquitto用なので今回は使わない。
+  Nefry.setStoreTitle("BeeBotte_Token", NEFRY_DATASTORE_BEEBOTTE);
   NefryDisplay.autoScrollFunc(DispNefryDisplay);
 
+  configTime( JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
+
+  IPAddress ip = WiFi.localIP();
+  ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
 }
 
 void loop() {
@@ -132,9 +142,9 @@ void loop() {
   msg.replace("@3", String(mpu6050_Quaternion[2]));
   msg.replace("@4", String(mpu6050_Quaternion[3]));
   MsgMpu6050 = mpu_main.GetErrMsg();
-  
+
   if (!client.connected()) reconnect();
-  if (client.connected()){
+  if (client.connected()) {
     client.loop();
     publish(RES_Q, msg);
   }
@@ -149,13 +159,13 @@ void publish(const char* resource, String data)
   JsonObject& root = jsonOutBuffer.createObject();
   root["data"] = data;
   root["ispublic"] = true;
-  root["ts"] = 0;
+  root["ts"] = time(NULL);;
 
   // Now print the JSON into a char buffer
   char buffer[128];
   root.printTo(buffer, sizeof(buffer));
 
   // Now publish the char buffer to Beebotte
-  client.publish(topic, buffer, 0);
+  client.publish(topic, buffer, QoS);
 }
 
