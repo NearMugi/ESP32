@@ -20,6 +20,7 @@ char topic[64];
 WiFiClient espClient;
 PubSubClient client(espClient);
 String msg;
+String sendData_Quaternion = "@1,@2,@3,@4";
 
 //date
 #include <time.h>
@@ -121,7 +122,11 @@ void loop() {
   interval<LOOPTIME_MPU6050>::run([] {
     mpu_main.updateValue();
     mpu_main.Get_Quaternion(mpu6050_Quaternion);
-    msg = "";
+    msg = sendData_Quaternion;
+    msg.replace("@1", String(mpu6050_Quaternion[0]));
+    msg.replace("@2", String(mpu6050_Quaternion[1]));
+    msg.replace("@3", String(mpu6050_Quaternion[2]));
+    msg.replace("@4", String(mpu6050_Quaternion[3]));
     MsgMpu6050 = mpu_main.GetMsg();
   });
 
