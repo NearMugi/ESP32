@@ -26,10 +26,10 @@ PubSubClient client(espClient);
 //switch
 #define PIN_DIGITAL_SW D8
 #define MAX_CNT 5
-#define WAIT_NEXTTIME_MS 5 //publishからの待ち時間(ms)
+#define WAIT_NEXTTIME_MS 5000 //publishからの待ち時間(ms)
 uint8_t cntOn;
 bool sw;
-uint8_t waitTime; //一度publishしてからの待ち時間
+uint16_t waitTime; //一度publishしてからの待ち時間
 
 //NefryDisplayMessage
 String MsgMqtt;

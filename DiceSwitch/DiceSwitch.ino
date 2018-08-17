@@ -21,8 +21,8 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 String msg;
 String tmpSendData = "[@1,@2]";
-#define WAIT_NEXTTIME_MS 5 //publishからの待ち時間(ms)
-uint8_t waitTime; //一度publishしてからの待ち時間
+#define WAIT_NEXTTIME_MS 5000 //publishからの待ち時間(ms)
+uint16_t waitTime; //一度publishしてからの待ち時間
 bool sw = false;
 
 //date
