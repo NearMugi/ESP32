@@ -12,13 +12,7 @@ void setting() {
 NefrySetting nefrySetting(setting);
 
 #include "MPU6050_Manage.h"
-#define QUATERNION true
-#define GRAVITY true
-#define ACCEL true
-#define LINEARACCEL true
-#define LINEARACCELINWORLD true
-#define YAWPITCHROLL true
-MPU6050_Manage mpu_main(QUATERNION, GRAVITY, ACCEL, LINEARACCEL, LINEARACCELINWORLD, YAWPITCHROLL);
+MPU6050_Manage mpu_main;
 
 //Calibration ON/OFF
 bool isCalibration;

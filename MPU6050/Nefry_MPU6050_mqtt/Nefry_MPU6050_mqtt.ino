@@ -28,13 +28,7 @@ String sendData_Quaternion = "@1,@2,@3,@4";
 
 //mpu6050
 #include "MPU6050_Manage.h"
-#define QUATERNION true
-#define GRAVITY false
-#define ACCEL false
-#define LINEARACCEL false
-#define LINEARACCELINWORLD false
-#define YAWPITCHROLL false
-MPU6050_Manage mpu_main(QUATERNION, GRAVITY, ACCEL, LINEARACCEL, LINEARACCELINWORLD, YAWPITCHROLL);
+MPU6050_Manage mpu_main;
 bool isCalibration; //Calibration ON/OFF
 int CalOfs[4] = { -263, -36, -13, 1149}; //Gyro x,y,z, Accel z
 float mpu6050_Quaternion[4];  //[w,x,y,z]
