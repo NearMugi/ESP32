@@ -134,17 +134,17 @@ void loop() {
   interval<LOOPTIME_SEND>::run([] {
     if (client.connected()) {
       client.loop();
-      publish(Res, msg);
+      publish();
     }
   });
 }
 
 
-void publish(const char* resource, String data)
+void publish()
 {
   StaticJsonBuffer<128> jsonOutBuffer;
   JsonObject& root = jsonOutBuffer.createObject();
-  root["data"] = data;
+  root["data"] = msg;
   root["ispublic"] = true;
   root["ts"] = time(NULL);
 
