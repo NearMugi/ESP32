@@ -30,7 +30,13 @@ String msg;
 
 //mpu6050
 #include "MPU6050_Manage.h"
-MPU6050_Manage mpu_main;
+#define QUATERNION true
+#define GRAVITY false
+#define ACCEL false
+#define LINEARACCEL false
+#define LINEARACCELINWORLD false
+#define YAWPITCHROLL false
+MPU6050_Manage mpu_main(QUATERNION, GRAVITY, ACCEL, LINEARACCEL, LINEARACCELINWORLD, YAWPITCHROLL);
 bool isCalibration; //Calibration ON/OFF
 int CalOfs[4] = { -263, -36, -13, 1149}; //Gyro x,y,z, Accel z
 float mpu6050_Quaternion[4];  //[w,x,y,z]
@@ -118,7 +124,7 @@ void loop() {
     mpu_main.updateValue();
     mpu_main.Get_Quaternion(mpu6050_Quaternion);
     msg = "";
-    MsgMpu6050 = mpu_main.GetErrMsg();
+    MsgMpu6050 = mpu_main.GetMsg();
   });
 
   //データ送信

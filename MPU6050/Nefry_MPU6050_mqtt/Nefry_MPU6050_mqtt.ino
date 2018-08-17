@@ -2,55 +2,53 @@
 #include <NefryDisplay.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
-
-String ipStr;
-
-#define NEFRY_DATASTORE_MOSQUITTO 0
-#define NEFRY_DATASTORE_BEEBOTTE 1
-
-#include <time.h>
-#define JST     3600*9
-
 #include <NefrySetting.h>
 void setting() {
   Nefry.disableDisplayStatus();
 }
 NefrySetting nefrySetting(setting);
 
-#include "MPU6050_Manage.h"
-MPU6050_Manage mpu_main;
-
-//Calibration ON/OFF
-bool isCalibration;
-
-//MPU6050の初期化時に使用するオフセット
-//CalibrationがOFFの時に適用される
-int CalOfs[4] = {0, 0, 0, 0}; //Gyro x,y,z, Accel z
-
-//MPU6050から取得するデータ
-float mpu6050_Quaternion[4];  //[w,x,y,z]
-String sendData_Quaternion = "@1,@2,@3,@4";
-
-String mqtt_server;
-
+//mqtt
+#define NEFRY_DATASTORE_MOSQUITTO 0
+#define NEFRY_DATASTORE_BEEBOTTE 1
 #define BBT "mqtt.beebotte.com"
 #define QoS 0
 String bbt_token;
 #define Channel "mpu6050"
-#define RES_Q "Quaternion"
+#define Res "Quaternion"
 char topic[64];
-
 WiFiClient espClient;
 PubSubClient client(espClient);
 String msg;
 
-#define MAX_MSGSIZE 20
-String getTopic;
-char getPayload[MAX_MSGSIZE];
+//date
+#include <time.h>
+#define JST     3600*9
 
+//mpu6050
+#include "MPU6050_Manage.h"
+#define QUATERNION true
+#define GRAVITY false
+#define ACCEL false
+#define LINEARACCEL false
+#define LINEARACCELINWORLD false
+#define YAWPITCHROLL false
+MPU6050_Manage mpu_main(QUATERNION, GRAVITY, ACCEL, LINEARACCEL, LINEARACCELINWORLD, YAWPITCHROLL);
+bool isCalibration; //Calibration ON/OFF
+int CalOfs[4] = { -263, -36, -13, 1149}; //Gyro x,y,z, Accel z
+float mpu6050_Quaternion[4];  //[w,x,y,z]
+
+//NefryDisplayMessage
 String MsgMqtt;
 String MsgMpu6050;
+String ipStr; //ipアドレス
 
+//ループ周期(us)
+#include <interval.h>
+#define LOOPTIME_MPU6050 10000
+#define LOOPTIME_SEND 30000
+
+//connect mqtt broker
 void reconnect() {
   Serial.print("Attempting MQTT connection...");
   // Create a random client ID
@@ -65,30 +63,15 @@ void reconnect() {
   if (client.connect(clientId.c_str(), tmp, "")) {
     Serial.println("connected");
     MsgMqtt = "Mqtt Connected";
-    // Once connected, publish an announcement...
-    //client.publish("comment", "Coming Packets");
-    //client.subscribe("res");
   } else {
     Serial.print("failed, rc=");
-    Serial.print(client.state());
+    Serial.println(client.state());
     MsgMqtt = "Mqtt DisConnected";
   }
 }
 
-void callback(char* topic, byte* payload, unsigned int length) {
-  getTopic = (String)topic;
-  for (int i = 0; i < MAX_MSGSIZE; i++) {
-    getPayload[i] = '\0';
-  }
-  for (int i = 0; i < length; i++) {
-    getPayload[i] = (char)payload[i];
-  }
-}
-
-
 void DispNefryDisplay() {
   NefryDisplay.clear();
-  String text;
   //取得したデータをディスプレイに表示
   NefryDisplay.setFont(ArialMT_Plain_10);
   NefryDisplay.drawString(0, 0, ipStr);
@@ -101,7 +84,8 @@ void DispNefryDisplay() {
 }
 
 void setup() {
-  Nefry.setProgramName("MPU6050 + BeeBotte");
+  Nefry.setProgramName("DiceSwitch");
+
   NefryDisplay.begin();
   NefryDisplay.setAutoScrollFlg(true);//自動スクロールを有効
 
@@ -109,47 +93,45 @@ void setup() {
   NefryDisplay.display();
   Nefry.ndelay(10);
 
-  //キャリブレーションする必要ない場合は指定したオフセットを渡す
-  isCalibration = false;
-  CalOfs[0] = -263;
-  CalOfs[1] = -36;
-  CalOfs[2] = -13;
-  CalOfs[3] = 1149;
-  mpu_main.init(isCalibration, CalOfs);
-
-  client.setServer(BBT, 1883);
-  //client.setCallback(callback);
-
-  // Create the topic to publish to
-  sprintf(topic, "%s/%s", Channel, RES_Q);
-
-  Nefry.setStoreTitle("MQTTServerIP", NEFRY_DATASTORE_MOSQUITTO); //mosquitto用なので今回は使わない。
-  Nefry.setStoreTitle("BeeBotte_Token", NEFRY_DATASTORE_BEEBOTTE);
   NefryDisplay.autoScrollFunc(DispNefryDisplay);
 
+  //mqtt
+  client.setServer(BBT, 1883);
+  sprintf(topic, "%s/%s", Channel, Res);
+  Nefry.setStoreTitle("MQTTServerIP", NEFRY_DATASTORE_MOSQUITTO); //mosquitto用なので今回は使わない。
+  Nefry.setStoreTitle("BeeBotte_Token", NEFRY_DATASTORE_BEEBOTTE);
+
+  //mpu6050
+  //キャリブレーションする必要ない場合は指定したオフセットを渡す
+  isCalibration = false;
+  mpu_main.init(isCalibration, CalOfs);
+
+  //date
   configTime( JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
 
+  //displayMessage
   IPAddress ip = WiFi.localIP();
   ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
 }
 
 void loop() {
-  mpu_main.updateValue();
-  mpu_main.Get_Quaternion(mpu6050_Quaternion);
-  msg = sendData_Quaternion;
-  msg.replace("@1", String(mpu6050_Quaternion[0]));
-  msg.replace("@2", String(mpu6050_Quaternion[1]));
-  msg.replace("@3", String(mpu6050_Quaternion[2]));
-  msg.replace("@4", String(mpu6050_Quaternion[3]));
-  MsgMpu6050 = mpu_main.GetErrMsg();
-
   if (!client.connected()) reconnect();
-  if (client.connected()) {
-    client.loop();
-    publish(RES_Q, msg);
-  }
 
-  //delay(100);
+  //mpu6050のデータを解析
+  interval<LOOPTIME_MPU6050>::run([] {
+    mpu_main.updateValue();
+    mpu_main.Get_Quaternion(mpu6050_Quaternion);
+    msg = "";
+    MsgMpu6050 = mpu_main.GetMsg();
+  });
+
+  //データ送信
+  interval<LOOPTIME_SEND>::run([] {
+    if (client.connected()) {
+      client.loop();
+      publish(Res, msg);
+    }
+  });
 }
 
 
@@ -159,7 +141,7 @@ void publish(const char* resource, String data)
   JsonObject& root = jsonOutBuffer.createObject();
   root["data"] = data;
   root["ispublic"] = true;
-  root["ts"] = time(NULL);;
+  root["ts"] = time(NULL);
 
   // Now print the JSON into a char buffer
   char buffer[128];
