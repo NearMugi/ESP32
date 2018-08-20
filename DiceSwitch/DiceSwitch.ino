@@ -67,7 +67,6 @@ String ipStr; //ipアドレス
 //ループ周期(us)
 #include <interval.h>
 #define LOOPTIME_MPU6050 10000
-#define LOOPTIME_SEND 30000
 
 //connect mqtt broker
 void reconnect() {
@@ -151,8 +150,7 @@ void loop() {
     }
   }
 
-
-  //mpu6050のデータを解析
+  //mpu6050のデータを解析・アクションがあれば送信
   interval<LOOPTIME_MPU6050>::run([] {
     mpu_main.updateValue();
     MsgMpu6050 = mpu_main.GetMsg();
@@ -165,10 +163,6 @@ void loop() {
     msg.replace("@1", String(top));
     msg.replace("@2", String(action));
 
-  });
-
-  //データ送信
-  interval<LOOPTIME_SEND>::run([] {
     //アクションがあった時だけ送信する
     if (action != ACT_KEEP) {
       if (client.connected()) {
