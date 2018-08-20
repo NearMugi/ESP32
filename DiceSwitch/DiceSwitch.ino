@@ -53,10 +53,10 @@ int top;
 #define ACT_KNOCK 3   //ノックする
 int action;
 
-#define MAX_IDX 100
+#define MAX_IDX 150
 int idx;
-int accel_bef[3]; //一つ前の値
-int accel_diff[3][MAX_IDX]; //一つ前の値からの差分
+int accel_max[3]; //区間内での最大値
+int accel_abs[3][MAX_IDX]; //加速度(絶対値)
 
 //NefryDisplayMessage
 String MsgMqtt;
@@ -184,14 +184,13 @@ void initJdgAct() {
   top = Z_P;
   action = ACT_KEEP;
   idx = 0;
-
-  accel_bef[0] = 0;
-  accel_bef[1] = 0;
-  accel_bef[2] = 0;
+  accel_max[0] = 0;
+  accel_max[1] = 0;
+  accel_max[2] = 0;
   for (int i = 0; i < MAX_IDX; i++) {
-    accel_diff[0][i] = 0;
-    accel_diff[1][i] = 0;
-    accel_diff[2][i] = 0;
+    accel_abs[0][i] = 0;
+    accel_abs[1][i] = 0;
+    accel_abs[2][i] = 0;
   }
 }
 
@@ -230,19 +229,103 @@ void Jdg_Top() {
 
 }
 
+#define BORDER_LINE_SHAKE 2500  //一度でもこの値を超えたとき"振った"と判断する
+#define BORDER_LINE_BOTTOM 200  //山の下限(下がったところ)
+#define MOUNTAIN_CNT 4  //振ったと判断する山の数
+#define BORDER_LINE_KEEP 100    //この値より小さいときは"維持かも"と判断する
+#define KEEP_CNT 10 //BORDER_LINE_KEEPをKEEP_CNT回連続して下回ると"維持"と判断する
 void Jdg_Action() {
-  //加速度の変化量を元に、ノックしているか振っているかどうか判断する。
+  //加速度の変化量を基に振っているかどうか判断する。
+  action = ACT_KEEP;
+
+  //加速度の絶対値と最大値を保存
   mpu_main.Get_WorldAccel(mpu6050_WorldAccel);
-  //差分と値を保存
   for (int i = 0; i < 3; i++) {
-    accel_diff[i][idx] = mpu6050_WorldAccel[i] - accel_bef[i];
-    accel_bef[i] = mpu6050_WorldAccel[i];
+    accel_abs[i][idx] = abs(mpu6050_WorldAccel[i]);
+    if (accel_abs[i][idx] > accel_max[i]) accel_max[i] = accel_abs[i][idx];
   }
-  if (++idx >= MAX_IDX) idx = MAX_IDX - 1;
+  if (++idx >= MAX_IDX) {
+    idx = MAX_IDX - 1;
+    //前に詰める
+    for (int i = 0; i < MAX_IDX - 2; i++) {
+      accel_abs[0][i] = accel_abs[0][i + 1];
+      accel_abs[1][i] = accel_abs[1][i + 1];
+      accel_abs[2][i] = accel_abs[2][i + 1];
+    }
+  }
 
   //解析
+  //連続した山の数が指定個以上
+  //一度でもボーダーラインを超える
+  //3軸の中で一番高い山
+  //上記を満たす場合、その方向に振ったと判断する。
+  bool isclear[3];//条件を満たした。
+  int mountain[3]; //山の数
+  int tmp_max[3];  //山の中で一番高い値
+  int keep_cnt; //連続して下回った回数
+  bool isJdgStart; //山かも
 
+  for (int i = 0; i < 3; i++) {
+    isclear[i] = false;
+    mountain[i] = 0;
+    tmp_max[i] = 0;
+    //一度もボーダーラインを超えていない場合は何もしない。
+    if (accel_max[i] < BORDER_LINE_SHAKE) {
+      continue;
+    }
 
+    isJdgStart = false;
+    keep_cnt = 0;
+    //山を数える
+    for (int j = 0; j < idx; j++) {
+      if (isclear[i]) break;
+
+      if (!isJdgStart) {
+        if (accel_abs[i][j] > BORDER_LINE_KEEP) {
+          isJdgStart = true;
+          keep_cnt = 0;
+        } else {
+          keep_cnt++;
+          //"維持"が一定以上続いた場合は全てリセット
+          if (keep_cnt >= KEEP_CNT) {
+            isJdgStart = false;
+            keep_cnt = KEEP_CNT;
+            mountain[i] = 0;
+            tmp_max[i] = 0;
+          }
+        }
+      }
+
+      if (isJdgStart) {
+        if (accel_abs[i][j] > tmp_max[i]) tmp_max[i] = accel_abs[i][j];
+        //下限に達したとき、山であると判断する
+        if (accel_abs[i][j] < BORDER_LINE_BOTTOM) {
+          mountain[i]++;
+          isJdgStart = false; //次の山を見つける
+
+          if (mountain[i] >= MOUNTAIN_CNT) isclear[i] = true;
+        }
+      }
+      
+    }
+  }
+
+  //3軸を比較してアクションを判定する
+  //x,y方向はどちらも"横振り"と判断するので、xまたはyとzを比較する
+  bool isHorizon = false;
+  if (isclear[0] || isclear[1]) {
+    action = ACT_SHAKE_H;
+    isHorizon = true;
+  }
+  if (isclear[2]) {
+    if(isHorizon){
+      if(tmp_max[2] > tmp_max[0] && tmp_max[2] > tmp_max[1]){
+         action = ACT_SHAKE_V;
+      }
+    } else {
+      action = ACT_SHAKE_V;
+    }
+  }
 }
 
 void publish()
