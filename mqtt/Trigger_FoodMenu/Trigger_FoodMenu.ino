@@ -29,7 +29,7 @@ PubSubClient client(espClient);
 #define WAIT_NEXTTIME_MS 5000 //publishからの待ち時間(ms)
 uint8_t cntOn;
 bool sw;
-uint16_t waitTime; //一度publishしてからの待ち時間
+long waitTime; //一度publishしてからの待ち時間
 
 //NefryDisplayMessage
 String MsgMqtt;
@@ -162,8 +162,8 @@ void publish()
     day = tm->tm_mday;
   }
 
-  char date[5];
-  sprintf(date, "%02d,%2d", mon, day);
+  char date[4];
+  sprintf(date, "%02d%02d", mon, day);
 
   StaticJsonBuffer<128> jsonOutBuffer;
   JsonObject& root = jsonOutBuffer.createObject();
