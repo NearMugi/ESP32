@@ -13,9 +13,10 @@ uint8_t value = 0;
 
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
-
+#define DEVICE "NefryBT"
 #define SERVICE_UUID        "D5875408-FA51-4763-A75D-7D33CECEBC31"
 #define CHARACTERISTIC_UUID "A4F01D8C-A037-43B6-9050-1876A8C23584"
+#define BLE_PROPERTY BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_INDICATE
 
 class MyServerCallbacks: public BLEServerCallbacks {
     void onConnect(BLEServer* pServer) {
@@ -31,8 +32,9 @@ void setup() {
   Serial.begin(115200);
 
   // Create the BLE Device
-  BLEDevice::init("NefryBT-n0bisuke");
+  BLEDevice::init(DEVICE);
 
+#if false
   // Create the BLE Server
   BLEServer *pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
@@ -41,13 +43,7 @@ void setup() {
   BLEService *pService = pServer->createService(SERVICE_UUID);
 
   // Create a BLE Characteristic
-  pCharacteristic = pService->createCharacteristic(
-                      CHARACTERISTIC_UUID,
-                      BLECharacteristic::PROPERTY_READ   |
-                      BLECharacteristic::PROPERTY_WRITE  |
-                      BLECharacteristic::PROPERTY_NOTIFY |
-                      BLECharacteristic::PROPERTY_INDICATE
-                    );
+  pCharacteristic = pService->createCharacteristic(CHARACTERISTIC_UUID, BLE_PROPERTY);
 
   // https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.descriptor.gatt.client_characteristic_configuration.xml
   // Create a BLE Descriptor
@@ -58,11 +54,12 @@ void setup() {
 
   // Start advertising
   pServer->getAdvertising()->start();
-  Serial.println("Waiting a client connection to notify...");
+  Serial.println(F("Waiting a client connection to notify..."));
+#endif
 }
 
 void loop() {
-
+#if false
   if (deviceConnected) {
     Serial.printf("*** NOTIFY: %d ***\n", value);
     char buffer[10];
@@ -74,4 +71,5 @@ void loop() {
     value++;
   }
   delay(2000);
+#endif
 }
