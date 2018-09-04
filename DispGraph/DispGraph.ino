@@ -26,7 +26,8 @@ void setup() {
   randomSeed(analogRead(0));
 }
 
-
+//グラフ
+#include "dispGraph.h"
 #define LOOPTIME_GRAPH 100000
 #define GRAPH_POS_X 25
 #define GRAPH_POS_Y 10
@@ -37,6 +38,18 @@ void setup() {
 #define VALUE_MIN 0
 #define VALUE_MAX 1023
 #define VALUE_SIZE (GRAPH_LEN_X / GRAPH_DPP) + 1
+graph_line grline = graph_line(
+                      LOOPTIME_GRAPH,
+                      GRAPH_POS_X,
+                      GRAPH_POS_Y,
+                      GRAPH_LEN_X,
+                      GRAPH_LEN_Y,
+                      GRAPH_DPP,
+                      VALUE_MIN,
+                      VALUE_MAX,
+                      VALUE_SIZE
+                    );
+
 int p[VALUE_SIZE][2];//グラフでプロットするx座標,データ(グラフ用に変換前)
 int vMax[2];  //最大値,グラフでプロットする位置
 
@@ -52,7 +65,7 @@ void dispGraph_set(int _v) {
   //前にずらす
   for (int i = 0; i < VALUE_SIZE; i++) {
     p[i][1] = p[i + 1][1];
-    if(p[i + 1][1] > vMax[0]) vMax[0] = p[i + 1][1];
+    if (p[i + 1][1] > vMax[0]) vMax[0] = p[i + 1][1];
   }
   //最後尾に追加する
   p[VALUE_SIZE - 1][1] = _v;
@@ -60,13 +73,12 @@ void dispGraph_set(int _v) {
 }
 
 void dispGraph_update() {
-  //補助線
-  NefryDisplay.drawHorizontalLine(GRAPH_POS_X, GRAPH_POS_Y, GRAPH_LEN_X);
-  NefryDisplay.drawHorizontalLine(GRAPH_POS_X, GRAPH_POS_Y + GRAPH_LEN_Y, GRAPH_LEN_X);
+  //領域の描画
+  grline.dispArea();
+
+  //最大値
   NefryDisplay.drawHorizontalLine(GRAPH_POS_X, vMax[1], GRAPH_LEN_X);
   NefryDisplay.setFont(ArialMT_Plain_10);
-  NefryDisplay.drawString(GRAPH_POS_X - 20, GRAPH_POS_Y - 8, String(VALUE_MAX));
-  NefryDisplay.drawString(GRAPH_POS_X - 20, GRAPH_POS_Y + GRAPH_LEN_Y - 8, String(VALUE_MIN));
   NefryDisplay.drawString(GRAPH_POS_X - 20, vMax[1] - 8, String(vMax[0]));
 
   int p1;
@@ -74,8 +86,8 @@ void dispGraph_update() {
   for (int i = 0; i < VALUE_SIZE - 1; i++) {
     //グラフ向けの値に変換
     p1 = map(p[i][1], VALUE_MIN, VALUE_MAX, GRAPH_LEN_Y + GRAPH_POS_Y, GRAPH_POS_Y);
-    p2 = map(p[i+1][1], VALUE_MIN, VALUE_MAX, GRAPH_LEN_Y + GRAPH_POS_Y, GRAPH_POS_Y);
-    
+    p2 = map(p[i + 1][1], VALUE_MIN, VALUE_MAX, GRAPH_LEN_Y + GRAPH_POS_Y, GRAPH_POS_Y);
+
     NefryDisplay.drawLine(p[i][0], p1, p[i + 1][0], p2);  //各座標を線で結ぶ
     //各座標をプロットする
     NefryDisplay.fillCircle(p[i][0], p1, 2); //頂点を丸くする
