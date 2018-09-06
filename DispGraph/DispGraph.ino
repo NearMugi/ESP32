@@ -8,7 +8,7 @@ void setting() {
 NefrySetting nefrySetting(setting);
 
 //ループ周期(us)
-#include <interval.h>
+#include "interval.h"
 
 //グラフ一時停止
 bool isStopGraph = false;
@@ -19,7 +19,7 @@ float deg = 0;
 
 
 //グラフ
-#include "dispGraph.h"
+#include "dispGraphLine.h"
 //static変数を定義
 int graph_line::lpTime;
 int graph_line::posX;
@@ -33,7 +33,7 @@ int graph_line::valueSIZE;
 
 //折れ線グラフの領域
 #define LOOPTIME_GRAPH 100000
-#define GRAPH_POS_X 25
+#define GRAPH_POS_X 27
 #define GRAPH_POS_Y 10
 #define GRAPH_LEN_X 100
 #define GRAPH_LEN_Y 50
@@ -80,9 +80,9 @@ void setup() {
   NefryDisplay.display();
 
   //表示するグラフの設定
-  grline.setGraph(GL_1, &v1[0], &p1[0], VERTEX_NONE, DISP_MAX);
-  grline.setGraph(GL_2, &v2[0], &p2[0], VERTEX_CIR, NOTDISP_MAX);
-  grline.setGraph(GL_3, &v3[0], &p3[0], VERTEX_SQU, NOTDISP_MAX);
+  grline.setGraph(GL_1, &v1[0], &p1[0], VERTEX_CIR, DISP_MAX);
+  grline.setGraph(GL_2, &v2[0], &p2[0], VERTEX_NONE, NOTDISP_MAX);
+  grline.setGraph(GL_3, &v3[0], &p3[0], VERTEX_NONE, NOTDISP_MAX);
 
   //サンプルデータ生成用乱数シード
   randomSeed(analogRead(0));
@@ -96,11 +96,6 @@ void dispGraphLine_update() {
 
 void DispNefryDisplay() {
   NefryDisplay.clear();
-  //取得したデータをディスプレイに表示
-  NefryDisplay.setFont(ArialMT_Plain_10);
-  NefryDisplay.drawString(35, 0, String(sampleData[0]));
-  NefryDisplay.drawString(70, 0, String(sampleData[1]));
-  NefryDisplay.drawString(105, 0, String(sampleData[2]));
   dispGraphLine_update();
   NefryDisplay.display();
 }
@@ -110,7 +105,6 @@ void loop() {
   if (Nefry.readSW()) {
     isStopGraph = !isStopGraph;
   }
-
 
   interval<LOOPTIME_GRAPH>::run([] {
     if (!isStopGraph) {

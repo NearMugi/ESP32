@@ -1,5 +1,5 @@
-#ifndef DISP_GRAPH_H
-#define DISP_GRAPH_H
+#ifndef DISP_GRAPH_LINE_H
+#define DISP_GRAPH_LINE_H
 #include <NefryDisplay.h>
 
 //頂点タイプ
@@ -13,14 +13,26 @@ enum VERTEX {
 #define DISP_MAX true
 #define NOTDISP_MAX false
 
-//表示するグラフ数
+//表示するグラフの最大数
 #define GRAPH_CNT 3
 
 //折れ線グラフ
 class graph_line {
 
   public:
-    graph_line(int _lpTime, int _posX, int _posY, int _lenX, int _lenY, int _dpp, int _valueMIN, int _valueMAX, int _valueSIZE, int *_x, int *_t) {
+    //コンストラクタ
+    graph_line(int _lpTime,
+               int _posX,
+               int _posY,
+               int _lenX,
+               int _lenY,
+               int _dpp,
+               int _valueMIN,
+               int _valueMAX,
+               int _valueSIZE,
+               int *_x,
+               int *_t
+              ) {
       lpTime = _lpTime;
       posX = _posX;
       posY = _posY;
@@ -38,6 +50,7 @@ class graph_line {
       }
 
       //時間
+      int tTotal;
       tCntMax = 1000000 / lpTime; //1秒ごとに垂線を引く
       t = _t;
       for (int i = 0; i < valueSIZE; i++) {
@@ -46,26 +59,9 @@ class graph_line {
 
     }
 
-    void dispArea() {
-      //補助線
-      NefryDisplay.drawHorizontalLine(posX, posY, lenX);
-      NefryDisplay.drawHorizontalLine(posX, posY + lenY, lenX);
-      NefryDisplay.setFont(ArialMT_Plain_10);
-      NefryDisplay.drawString(posX - 20, posY - 8, String(valueMAX));
-      NefryDisplay.drawString(posX - 20, posY + lenY - 8, String(valueMIN));
-
-      //時間
-      for (int i = 0; i < valueSIZE; i++) {
-        if (*(t + i) > 0) {
-          NefryDisplay.drawVerticalLine(*(x + i), posY, lenY);
-        }
-      }
-    }
-
     //グラフクラスの初期化
     void setGraph(int _idx, int *_v, int *_p, VERTEX _type, bool _isDispMax) {
-      _g[_idx] = graph(&_v[0], &_p[0], _type, _isDispMax);
-      _g[_idx].init();
+      _g[_idx].init(&_v[0], &_p[0], _type, _isDispMax);
     }
 
     //グラフデータの追加
@@ -77,9 +73,12 @@ class graph_line {
     //時間の更新
     void updateGraphTime() {
       bool isSplit = false;
-      if (++tCnt >= tCntMax) {
-        tCnt = 0;
-        isSplit = true;
+      if (tCntMax > 0) {
+        tCnt = (tCnt + 1) % tCntMax;
+        if (tCnt == 0) {
+          isSplit = true;
+          tTotal++;
+        }
       }
 
       //前にずらす
@@ -88,6 +87,27 @@ class graph_line {
       }
       //最後尾に追加する
       *(t + valueSIZE - 1) = (int)isSplit;
+    }
+
+    //補助線を引く
+    void dispArea() {
+      //表示領域
+      NefryDisplay.drawHorizontalLine(posX, posY, lenX);
+      NefryDisplay.drawHorizontalLine(posX, posY + lenY, lenX);
+      NefryDisplay.setFont(ArialMT_Plain_10);
+      NefryDisplay.drawString(posX - 22, posY - 8, String(valueMAX));
+      NefryDisplay.drawString(posX - 22, posY + lenY - 8, String(valueMIN));
+
+      //時間
+      NefryDisplay.drawString(posX + lenX - 18, 0, String(tTotal));
+      for (int i = 0; i < valueSIZE; i++) {
+        if (*(t + i) > 0) {
+          NefryDisplay.drawVerticalLine(*(x + i), posY, lenY);
+        } else {
+          NefryDisplay.drawVerticalLine(*(x + i), posY, 3);
+          NefryDisplay.drawVerticalLine(*(x + i), posY + lenY - 3, 3);
+        }
+      }
     }
 
     //グラフデータの描画
@@ -127,7 +147,7 @@ class graph_line {
     }
 
   private:
-    //グラフ領域・ピッチ・更新時間
+    //グラフ領域・ピッチ
     static int lpTime;
     static int posX;
     static int posY;
@@ -138,7 +158,9 @@ class graph_line {
     static int valueMAX;
     static int valueSIZE;
     int *x;
-    int tCntMax; //
+    //時間
+    int tTotal;
+    int tCntMax;
     int tCnt;
     int *t;
 
@@ -157,15 +179,14 @@ class graph_line {
           isSet = false;
           isDispMax = false;
         }
-        graph(int *_v, int *_p, VERTEX _type, bool _isDispMax) {
+
+        void init(int *_v, int *_p, VERTEX _type, bool _isDispMax) {
           isSet = true;
           isDispMax = _isDispMax;
           type = _type;
           v = _v;
           p = _p;
-        }
 
-        void init() {
           for (int i = 0; i < valueSIZE; i++) {
             *(v + i) = 0;
             *(p + i)  = lenY + posY;
