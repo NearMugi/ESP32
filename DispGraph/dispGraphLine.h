@@ -14,7 +14,7 @@ enum VERTEX {
 #define NOTDISP_MAX false
 
 //表示するグラフの最大数
-#define GRAPH_CNT 3
+#define GRAPH_LINE_CNT 3
 
 //折れ線グラフ
 class graph_line {
@@ -112,7 +112,7 @@ class graph_line {
 
     //グラフデータの描画
     void updateGraph() {
-      for (int _idx = 0; _idx < GRAPH_CNT; _idx++) {
+      for (int _idx = 0; _idx < GRAPH_LINE_CNT; _idx++) {
         if (!_g[_idx].isSet) continue;
 
         //最大値
@@ -207,6 +207,6 @@ class graph_line {
           vMax[1] = map(vMax[0], valueMIN, valueMAX, lenY + posY, posY);
         }
     };
-    graph _g[GRAPH_CNT];
+    graph _g[GRAPH_LINE_CNT];
 };
 #endif
