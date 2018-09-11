@@ -11,6 +11,18 @@ NefrySetting nefrySetting(setting);
 #include "interval.h"
 #define LOOPTIME_GRAPH 100000
 
+//表示する種類
+enum GRAPH_TYPE {
+  NONE,
+  LINE,
+  BAR_V,
+  BAR_S,
+  CIRCLE,
+  TURMINAL
+};
+GRAPH_TYPE dispType = NONE;
+GRAPH_TYPE dispTypeBef = NONE;
+
 //グラフ一時停止
 bool isStopGraph = false;
 
@@ -131,6 +143,12 @@ int vb2[VALUE_BAR_SIZE];
 int vb3[VALUE_BAR_SIZE];
 int vMax[3];
 int vAve[3];
+
+
+//円グラフ
+#include "dispGraphCircle.h"
+graph_circle grcir = graph_circle();
+
 void setup() {
   Nefry.enableSW();
 
@@ -140,21 +158,33 @@ void setup() {
   NefryDisplay.clear();
   NefryDisplay.display();
 
-  //表示するグラフの設定
-  grline.setGraph(GL_1, &v1[0], &p1[0], VERTEX_CIR, DISP_MAX);
-  grline.setGraph(GL_2, &v2[0], &p2[0], VERTEX_NONE, NOTDISP_MAX);
-  grline.setGraph(GL_3, &v3[0], &p3[0], VERTEX_NONE, NOTDISP_MAX);
-
-  grbarV.setGraph(GL_1, &vb1[0], &vMax[0], &vAve[0]);
-  grbarV.setGraph(GL_2, &vb2[0], &vMax[1], &vAve[1]);
-  grbarV.setGraph(GL_3, &vb3[0], &vMax[2], &vAve[2]);
-
-  grbarS.setGraph(GL_1, &vb1[0], &vMax[0], &vAve[0]);
-  grbarS.setGraph(GL_2, &vb2[0], &vMax[1], &vAve[1]);
-  grbarS.setGraph(GL_3, &vb3[0], &vMax[2], &vAve[2]);
+  //描画するタイプを選択
+  dispType = NONE;
 
   //サンプルデータ生成用乱数シード
   randomSeed(analogRead(0));
+}
+
+//グラフの初期化
+void dispGraphLine_init() {
+  grline.setGraph(GL_1, &v1[0], &p1[0], VERTEX_CIR, DISP_MAX);
+  grline.setGraph(GL_2, &v2[0], &p2[0], VERTEX_NONE, NOTDISP_MAX);
+  grline.setGraph(GL_3, &v3[0], &p3[0], VERTEX_NONE, NOTDISP_MAX);
+}
+
+void dispGraphBarV_init() {
+  grbarV.setGraph(GL_1, &vb1[0], &vMax[0], &vAve[0]);
+  grbarV.setGraph(GL_2, &vb2[0], &vMax[1], &vAve[1]);
+  grbarV.setGraph(GL_3, &vb3[0], &vMax[2], &vAve[2]);
+}
+
+void dispGraphBarS_init() {
+  grbarS.setGraph(GL_1, &vb1[0], &vMax[0], &vAve[0]);
+  grbarS.setGraph(GL_2, &vb2[0], &vMax[1], &vAve[1]);
+  grbarS.setGraph(GL_3, &vb3[0], &vMax[2], &vAve[2]);
+}
+
+void dispGraphCircle_init() {
 }
 
 //折れ線グラフの描画
@@ -175,18 +205,61 @@ void dispGraphBarS_update() {
   grbarS.updateGraph();
 }
 
+//円グラフの描画
+void dispGraphCircle_update() {
+  grcir.dispArea();
+}
+
 void DispNefryDisplay() {
   NefryDisplay.clear();
-  //dispGraphLine_update();
-  dispGraphBarV_update();
-  //dispGraphBarS_update();
+  switch (dispType) {
+    case LINE:
+      dispGraphLine_update();
+      break;
+    case BAR_V:
+      dispGraphBarV_update();
+      break;
+    case BAR_S:
+      dispGraphBarS_update();
+      break;
+    case CIRCLE:
+      dispGraphCircle_update();
+      break;
+    default:
+      NefryDisplay.setFont(ArialMT_Plain_16);
+      NefryDisplay.drawString(0, 0, "Select GraphType...");
+      break;
+  }
   NefryDisplay.display();
 }
 
 
 void loop() {
+  if (dispType != dispTypeBef) {
+    switch (dispType) {
+      case LINE:
+        dispGraphLine_init();
+        break;
+      case BAR_V:
+        dispGraphBarV_init();
+        break;
+      case BAR_S:
+        dispGraphBarS_init();
+        break;
+      case CIRCLE:
+        dispGraphCircle_init();
+        break;
+    }
+  }
+  dispTypeBef = dispType;
+
+
+
   if (Nefry.readSW()) {
-    isStopGraph = !isStopGraph;
+//    isStopGraph = !isStopGraph;
+    //仮
+    dispType = (GRAPH_TYPE)((int)dispType + 1);
+    if(dispType == TURMINAL) dispType = LINE;
   }
 
   interval<LOOPTIME_GRAPH>::run([] {
@@ -196,15 +269,24 @@ void loop() {
       sampleData[2] = (VALUE_LINE_MAX / 2) * (1 + cos(deg / (180 / PI)));
       deg += 10;
 
-      grline.addGraphData(GL_1, (int)sampleData[0]);
-      grline.addGraphData(GL_2, (int)sampleData[1]);
-      grline.addGraphData(GL_3, (int)sampleData[2]);
-      grline.updateGraphTime();
+      switch (dispType) {
+        case LINE:
+          grline.addGraphData(GL_1, (int)sampleData[0]);
+          grline.addGraphData(GL_2, (int)sampleData[1]);
+          grline.addGraphData(GL_3, (int)sampleData[2]);
+          grline.updateGraphTime();
+          break;
+        case BAR_V:
+        case BAR_S:
+          grbarV.addGraphData(GL_1, (int)sampleData[0]);
+          grbarV.addGraphData(GL_2, (int)sampleData[1]);
+          grbarV.addGraphData(GL_3, (int)sampleData[2]);
+          grbarV.updateGraphTime();
+          break;
+        case CIRCLE:
 
-      grbarV.addGraphData(GL_1, (int)sampleData[0]);
-      grbarV.addGraphData(GL_2, (int)sampleData[1]);
-      grbarV.addGraphData(GL_3, (int)sampleData[2]);
-      grbarV.updateGraphTime();
+          break;
+      }
     }
 
     DispNefryDisplay();
