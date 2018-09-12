@@ -50,15 +50,9 @@ class graph_line {
       }
 
       //時間
-      int tTotal;
-      tCntMax = 1000000 / lpTime; //1秒ごとに垂線を引く
       t = _t;
-      for (int i = 0; i < valueSIZE; i++) {
-        *(t + i) = 0;
-      }
 
     }
-
     //グラフクラスの初期化
     void setGraph(int _idx, int *_v, int *_p, VERTEX _type, bool _isDispMax) {
       _g[_idx].init(&_v[0], &_p[0], _type, _isDispMax);
@@ -69,7 +63,16 @@ class graph_line {
       if (!_g[_idx].isSet) return;
       _g[_idx].addData(_v);
     }
-
+    
+    //時間の初期化
+    void initGraphTime(){
+      tCntMax = 1000000 / lpTime; //1秒ごとに垂線を引く
+      tCnt = 0;
+      tTotal = 0;
+      for (int i = 0; i < valueSIZE; i++) {
+        *(t + i) = 0;
+      }      
+    }
     //時間の更新
     void updateGraphTime() {
       bool isSplit = false;

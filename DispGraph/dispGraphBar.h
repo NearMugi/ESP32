@@ -36,10 +36,6 @@ class graph_bar {
       valueMAX = _valueMAX;
       valueSIZE = _valueSIZE;
 
-      //時間
-      tTotal = 0;
-      tCntMax = 1000000 / lpTime; //1秒カウント
-
     }
 
     //グラフクラスの初期化
@@ -52,7 +48,12 @@ class graph_bar {
       if (!_g[_idx].isSet) return;
       _g[_idx].addData(_v);
     }
-
+    
+    //時間の初期化
+    void initGraphTime(){
+      tTotal = 0;
+      tCntMax = 1000000 / lpTime; //1秒カウント   
+    }
     //時間の更新
     void updateGraphTime() {
       if (tCntMax > 0) {

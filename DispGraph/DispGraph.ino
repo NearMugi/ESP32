@@ -7,6 +7,9 @@ void setting() {
 }
 NefrySetting nefrySetting(setting);
 
+//切り替えボタン
+#define PIN_SW D8
+
 //ループ周期(us)
 #include "interval.h"
 #define LOOPTIME_GRAPH 100000
@@ -22,6 +25,9 @@ enum GRAPH_TYPE {
 };
 GRAPH_TYPE dispType = NONE;
 GRAPH_TYPE dispTypeBef = NONE;
+
+//グラフ切り替え
+bool isChange = false;
 
 //グラフ一時停止
 bool isStopGraph = false;
@@ -158,6 +164,8 @@ void setup() {
   NefryDisplay.clear();
   NefryDisplay.display();
 
+  pinMode(PIN_SW,INPUT_PULLUP);
+
   //描画するタイプを選択
   dispType = NONE;
 
@@ -167,18 +175,21 @@ void setup() {
 
 //グラフの初期化
 void dispGraphLine_init() {
+  grline.initGraphTime();
   grline.setGraph(GL_1, &v1[0], &p1[0], VERTEX_CIR, DISP_MAX);
   grline.setGraph(GL_2, &v2[0], &p2[0], VERTEX_NONE, NOTDISP_MAX);
   grline.setGraph(GL_3, &v3[0], &p3[0], VERTEX_NONE, NOTDISP_MAX);
 }
 
 void dispGraphBarV_init() {
+  grbarV.initGraphTime();
   grbarV.setGraph(GL_1, &vb1[0], &vMax[0], &vAve[0]);
   grbarV.setGraph(GL_2, &vb2[0], &vMax[1], &vAve[1]);
   grbarV.setGraph(GL_3, &vb3[0], &vMax[2], &vAve[2]);
 }
 
 void dispGraphBarS_init() {
+  grbarS.initGraphTime();
   grbarS.setGraph(GL_1, &vb1[0], &vMax[0], &vAve[0]);
   grbarS.setGraph(GL_2, &vb2[0], &vMax[1], &vAve[1]);
   grbarS.setGraph(GL_3, &vb3[0], &vMax[2], &vAve[2]);
@@ -235,6 +246,20 @@ void DispNefryDisplay() {
 
 
 void loop() {
+  
+  //表示グラフの切り替え
+  if(isChange){
+    if(!digitalRead(PIN_SW)){
+      dispType = (GRAPH_TYPE)((int)dispType + 1);
+      if(dispType == TURMINAL) dispType = LINE;    
+      isChange = false;
+    }    
+  } else {
+    if(digitalRead(PIN_SW)){
+      isChange = true;
+    }        
+  }
+  
   if (dispType != dispTypeBef) {
     switch (dispType) {
       case LINE:
@@ -253,15 +278,12 @@ void loop() {
   }
   dispTypeBef = dispType;
 
-
-
+  //グラフ更新一時停止
   if (Nefry.readSW()) {
-//    isStopGraph = !isStopGraph;
-    //仮
-    dispType = (GRAPH_TYPE)((int)dispType + 1);
-    if(dispType == TURMINAL) dispType = LINE;
+    isStopGraph = !isStopGraph;
   }
-
+  
+  //データ・グラフ更新
   interval<LOOPTIME_GRAPH>::run([] {
     if (!isStopGraph) {
       sampleData[0] = random(VALUE_LINE_MIN + 100, VALUE_LINE_MAX + 1 - 100);
