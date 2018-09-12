@@ -79,9 +79,9 @@ graph_line grline = graph_line(
 
 //折れ線グラフのグラフの設定
 //頂点の数が可変なので外部で配列を用意している
-#define GL_1 0
-#define GL_2 1
-#define GL_3 2
+#define GR_1 0
+#define GR_2 1
+#define GR_3 2
 int v1[VALUE_LINE_SIZE]; //頂点の値
 int p1[VALUE_LINE_SIZE]; //グラフでプロットするy座標
 int v2[VALUE_LINE_SIZE]; //頂点の値
@@ -164,7 +164,7 @@ void setup() {
   NefryDisplay.clear();
   NefryDisplay.display();
 
-  pinMode(PIN_SW,INPUT_PULLUP);
+  pinMode(PIN_SW, INPUT_PULLUP);
 
   //描画するタイプを選択
   dispType = NONE;
@@ -176,26 +176,30 @@ void setup() {
 //グラフの初期化
 void dispGraphLine_init() {
   grline.initGraphTime();
-  grline.setGraph(GL_1, &v1[0], &p1[0], VERTEX_CIR, DISP_MAX);
-  grline.setGraph(GL_2, &v2[0], &p2[0], VERTEX_NONE, NOTDISP_MAX);
-  grline.setGraph(GL_3, &v3[0], &p3[0], VERTEX_NONE, NOTDISP_MAX);
+  grline.setGraph(GR_1, &v1[0], &p1[0], VERTEX_CIR, DISP_MAX);
+  grline.setGraph(GR_2, &v2[0], &p2[0], VERTEX_NONE, NOTDISP_MAX);
+  grline.setGraph(GR_3, &v3[0], &p3[0], VERTEX_NONE, NOTDISP_MAX);
 }
 
 void dispGraphBarV_init() {
   grbarV.initGraphTime();
-  grbarV.setGraph(GL_1, &vb1[0], &vMax[0], &vAve[0]);
-  grbarV.setGraph(GL_2, &vb2[0], &vMax[1], &vAve[1]);
-  grbarV.setGraph(GL_3, &vb3[0], &vMax[2], &vAve[2]);
+  grbarV.setGraph(GR_1, &vb1[0], &vMax[0], &vAve[0]);
+  grbarV.setGraph(GR_2, &vb2[0], &vMax[1], &vAve[1]);
+  grbarV.setGraph(GR_3, &vb3[0], &vMax[2], &vAve[2]);
 }
 
 void dispGraphBarS_init() {
   grbarS.initGraphTime();
-  grbarS.setGraph(GL_1, &vb1[0], &vMax[0], &vAve[0]);
-  grbarS.setGraph(GL_2, &vb2[0], &vMax[1], &vAve[1]);
-  grbarS.setGraph(GL_3, &vb3[0], &vMax[2], &vAve[2]);
+  grbarS.setGraph(GR_1, &vb1[0], &vMax[0], &vAve[0]);
+  grbarS.setGraph(GR_2, &vb2[0], &vMax[1], &vAve[1]);
+  grbarS.setGraph(GR_3, &vb3[0], &vMax[2], &vAve[2]);
 }
 
 void dispGraphCircle_init() {
+  //グラフ番号・頂点座標(x,y)・半径(r)・対象の値(最小値,最大値)
+  grcir.setGraph(GR_1, 20, 35, 20, 0, 1023);
+  grcir.setGraph(GR_2, 62, 35, 20, 0, 1023);
+  grcir.setGraph(GR_3, 104, 35, 20, 0, 1023);
 }
 
 //折れ線グラフの描画
@@ -219,6 +223,7 @@ void dispGraphBarS_update() {
 //円グラフの描画
 void dispGraphCircle_update() {
   grcir.dispArea();
+  grcir.updateGraph();
 }
 
 void DispNefryDisplay() {
@@ -246,20 +251,20 @@ void DispNefryDisplay() {
 
 
 void loop() {
-  
+
   //表示グラフの切り替え
-  if(isChange){
-    if(!digitalRead(PIN_SW)){
+  if (isChange) {
+    if (!digitalRead(PIN_SW)) {
       dispType = (GRAPH_TYPE)((int)dispType + 1);
-      if(dispType == TURMINAL) dispType = LINE;    
+      if (dispType == TURMINAL) dispType = LINE;
       isChange = false;
-    }    
+    }
   } else {
-    if(digitalRead(PIN_SW)){
+    if (digitalRead(PIN_SW)) {
       isChange = true;
-    }        
+    }
   }
-  
+
   if (dispType != dispTypeBef) {
     switch (dispType) {
       case LINE:
@@ -282,31 +287,33 @@ void loop() {
   if (Nefry.readSW()) {
     isStopGraph = !isStopGraph;
   }
-  
+
   //データ・グラフ更新
   interval<LOOPTIME_GRAPH>::run([] {
     if (!isStopGraph) {
-      sampleData[0] = random(VALUE_LINE_MIN + 100, VALUE_LINE_MAX + 1 - 100);
+      sampleData[0] = random(VALUE_LINE_MIN + 300, VALUE_LINE_MAX + 1 - 200);
       sampleData[1] = (VALUE_LINE_MAX / 2) * (1 + sin(deg / (180 / PI)));
       sampleData[2] = (VALUE_LINE_MAX / 2) * (1 + cos(deg / (180 / PI)));
       deg += 10;
 
       switch (dispType) {
         case LINE:
-          grline.addGraphData(GL_1, (int)sampleData[0]);
-          grline.addGraphData(GL_2, (int)sampleData[1]);
-          grline.addGraphData(GL_3, (int)sampleData[2]);
+          grline.addGraphData(GR_1, (int)sampleData[0]);
+          grline.addGraphData(GR_2, (int)sampleData[1]);
+          grline.addGraphData(GR_3, (int)sampleData[2]);
           grline.updateGraphTime();
           break;
         case BAR_V:
         case BAR_S:
-          grbarV.addGraphData(GL_1, (int)sampleData[0]);
-          grbarV.addGraphData(GL_2, (int)sampleData[1]);
-          grbarV.addGraphData(GL_3, (int)sampleData[2]);
+          grbarV.addGraphData(GR_1, (int)sampleData[0]);
+          grbarV.addGraphData(GR_2, (int)sampleData[1]);
+          grbarV.addGraphData(GR_3, (int)sampleData[2]);
           grbarV.updateGraphTime();
           break;
         case CIRCLE:
-
+          grcir.addGraphData(GR_1, (int)sampleData[0]);
+          grcir.addGraphData(GR_2, (int)sampleData[1]);
+          grcir.addGraphData(GR_3, (int)sampleData[2]);
           break;
       }
     }
