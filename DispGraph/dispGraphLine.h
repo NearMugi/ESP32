@@ -54,8 +54,8 @@ class graph_line {
 
     }
     //グラフクラスの初期化
-    void setGraph(int _idx, int *_v, int *_p, VERTEX _type, bool _isDispMax) {
-      _g[_idx].init(&_v[0], &_p[0], _type, _isDispMax);
+    void setGraph(int _idx, int *_v, VERTEX _type, bool _isDispMax) {
+      _g[_idx].init(&_v[0], _type, _isDispMax);
     }
 
     //グラフデータの追加
@@ -119,21 +119,27 @@ class graph_line {
         if (!_g[_idx].isSet) continue;
 
         //最大値
+        int _tmpMax = lenY + posY;
         if (_g[_idx].isDispMax) {
-          NefryDisplay.drawHorizontalLine(posX, _g[_idx].vMax[1], lenX);
+          _tmpMax = map(_g[_idx].vMax, valueMIN, valueMAX, lenY + posY, posY);
+          NefryDisplay.drawHorizontalLine(posX, _tmpMax, lenX);
           NefryDisplay.setFont(ArialMT_Plain_10);
-          NefryDisplay.drawString(posX - 20, _g[_idx].vMax[1] - 8, String(_g[_idx].vMax[0]));
+          NefryDisplay.drawString(posX - 20, _tmpMax - 8, String(_g[_idx].vMax));
         }
-
+        
+        //各座標を線で結ぶ  
+        int y0 = lenY + posY;
+        int y1 = lenY + posY;        
         for (int i = 0; i < valueSIZE - 1; i++) {
-
-          NefryDisplay.drawLine(*(x + i), *(_g[_idx].p + i),
-                                *(x + i + 1), *(_g[_idx].p + i + 1)); //各座標を線で結ぶ
+          y0 = map(*(_g[_idx].v + i), valueMIN, valueMAX, lenY + posY, posY);
+          y1 = map(*(_g[_idx].v + i + 1), valueMIN, valueMAX, lenY + posY, posY);
+          NefryDisplay.drawLine(*(x + i), y0, *(x + i + 1), y1); 
           //各座標をプロットする
-          vertexPlot(_g[_idx].type, *(x + i), *(_g[_idx].p + i));
+          vertexPlot(_g[_idx].type, *(x + i), y0);
         }
         //最後の点をプロット
-        vertexPlot(_g[_idx].type, *(x + valueSIZE - 1), *(_g[_idx].p + valueSIZE - 1));
+        y0 = map(*(_g[_idx].v + valueSIZE - 1), valueMIN, valueMAX, lenY + posY, posY);
+        vertexPlot(_g[_idx].type, *(x + valueSIZE - 1), y0);
       }
     }
     void vertexPlot(VERTEX type, int x, int y) {
@@ -151,14 +157,14 @@ class graph_line {
 
   private:
     //グラフ領域・ピッチ
-    static int lpTime;
-    static int posX;
-    static int posY;
-    static int lenX;
-    static int lenY;
-    static int dpp;//点をプロットする間隔(1なら1ドットにつき1点、2なら2ドットにつき1点)
-    static int valueMIN;
-    static int valueMAX;
+    int lpTime;
+    int posX;
+    int posY;
+    int lenX;
+    int lenY;
+    int dpp;//点をプロットする間隔(1なら1ドットにつき1点、2なら2ドットにつき1点)
+    int valueMIN;
+    int valueMAX;
     static int valueSIZE;
     int *x;
     //時間
@@ -174,8 +180,7 @@ class graph_line {
         bool isDispMax;
         VERTEX type; //頂点のタイプ
         int *v; //頂点の値
-        int *p; //プロットする頂点座標
-        int vMax[2];  //最大値,平行線のy座標
+        int vMax;  //最大値
 
         //コンストラクタ
         graph() {
@@ -183,31 +188,26 @@ class graph_line {
           isDispMax = false;
         }
 
-        void init(int *_v, int *_p, VERTEX _type, bool _isDispMax) {
+        void init(int *_v,VERTEX _type, bool _isDispMax) {
           isSet = true;
           isDispMax = _isDispMax;
           type = _type;
           v = _v;
-          p = _p;
 
           for (int i = 0; i < valueSIZE; i++) {
             *(v + i) = 0;
-            *(p + i)  = lenY + posY;
           }
         }
 
         void addData(int _v) {
-          vMax[0] = _v;  //最大値に仮設定
+          vMax = _v;  //最大値に仮設定
           //前にずらす
           for (int i = 0; i < valueSIZE - 1; i++) {
             *(v + i) = *(v + i + 1);
-            *(p + i) = *(p + i + 1);
-            if (*(v + i) > vMax[0]) vMax[0] = *(v + i);
+            if (*(v + i) > vMax) vMax = *(v + i);
           }
           //最後尾に追加する
           *(v + valueSIZE - 1) = _v;
-          *(p + valueSIZE - 1) = map(_v, valueMIN, valueMAX, lenY + posY, posY);
-          vMax[1] = map(vMax[0], valueMIN, valueMAX, lenY + posY, posY);
         }
     };
     graph _g[GRAPH_LINE_CNT];

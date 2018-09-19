@@ -26,6 +26,10 @@ enum GRAPH_TYPE {
 GRAPH_TYPE dispType = NONE;
 GRAPH_TYPE dispTypeBef = NONE;
 
+#define GR_1 0
+#define GR_2 1
+#define GR_3 2
+
 //グラフ切り替え
 bool isChange = false;
 
@@ -41,14 +45,6 @@ float deg = 0;
 #include "dispGraphLine.h"
 #include "dispGraphBar.h"
 //static変数を定義
-int graph_line::lpTime;
-int graph_line::posX;
-int graph_line::posY;
-int graph_line::lenX;
-int graph_line::lenY;
-int graph_line::dpp;
-int graph_line::valueMIN;
-int graph_line::valueMAX;
 int graph_line::valueSIZE;
 
 //折れ線グラフの領域
@@ -60,9 +56,9 @@ int graph_line::valueSIZE;
 
 #define VALUE_LINE_MIN 0
 #define VALUE_LINE_MAX 1023
-#define VALUE_LINE_SIZE (GRAPH_LINE_LEN_X / GRAPH_LEN_DPP) + 1
-int x[VALUE_LINE_SIZE];  //x座標
-int t[VALUE_LINE_SIZE];  //一定間隔に垂線を引くための配列(垂線の有無)
+#define LINE_PLOT_SIZE (GRAPH_LINE_LEN_X / GRAPH_LEN_DPP) + 1
+int x[LINE_PLOT_SIZE];  //x座標
+int t[LINE_PLOT_SIZE];  //一定間隔に垂線を引くための配列(垂線の有無)
 graph_line grline = graph_line(
                       LOOPTIME_GRAPH,
                       GRAPH_LINE_POS_X,
@@ -72,22 +68,16 @@ graph_line grline = graph_line(
                       GRAPH_LEN_DPP,
                       VALUE_LINE_MIN,
                       VALUE_LINE_MAX,
-                      VALUE_LINE_SIZE,
+                      LINE_PLOT_SIZE,
                       &x[0],
                       &t[0]
                     );
 
 //折れ線グラフのグラフの設定
 //頂点の数が可変なので外部で配列を用意している
-#define GR_1 0
-#define GR_2 1
-#define GR_3 2
-int v1[VALUE_LINE_SIZE]; //頂点の値
-int p1[VALUE_LINE_SIZE]; //グラフでプロットするy座標
-int v2[VALUE_LINE_SIZE]; //頂点の値
-int p2[VALUE_LINE_SIZE]; //グラフでプロットするy座標
-int v3[VALUE_LINE_SIZE]; //頂点の値
-int p3[VALUE_LINE_SIZE]; //グラフでプロットするy座標
+int v1[LINE_PLOT_SIZE]; //頂点の値
+int v2[LINE_PLOT_SIZE]; //頂点の値
+int v3[LINE_PLOT_SIZE]; //頂点の値
 
 
 
@@ -176,9 +166,9 @@ void setup() {
 //グラフの初期化
 void dispGraphLine_init() {
   grline.initGraphTime();
-  grline.setGraph(GR_1, &v1[0], &p1[0], VERTEX_CIR, DISP_MAX);
-  grline.setGraph(GR_2, &v2[0], &p2[0], VERTEX_NONE, NOTDISP_MAX);
-  grline.setGraph(GR_3, &v3[0], &p3[0], VERTEX_NONE, NOTDISP_MAX);
+  grline.setGraph(GR_1, &v1[0], VERTEX_CIR, DISP_MAX);
+  grline.setGraph(GR_2, &v2[0], VERTEX_NONE, NOTDISP_MAX);
+  grline.setGraph(GR_3, &v3[0], VERTEX_NONE, NOTDISP_MAX);
 }
 
 void dispGraphBarV_init() {
