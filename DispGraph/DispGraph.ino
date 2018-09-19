@@ -84,13 +84,6 @@ int v3[LINE_PLOT_SIZE]; //頂点の値
 //棒グラフ
 #include "dispGraphBar.h"
 //static変数を定義
-int graph_bar::lpTime;
-int graph_bar::posX[2];
-int graph_bar::posY[2];
-int graph_bar::lenX[2];
-int graph_bar::lenY[2];
-int graph_bar::valueMIN;
-int graph_bar::valueMAX;
 int graph_bar::valueSIZE;
 
 //棒グラフ(縦方向)の領域
@@ -106,39 +99,16 @@ int graph_bar::valueSIZE;
 
 #define VALUE_BAR_MIN 0
 #define VALUE_BAR_MAX 1023
-#define VALUE_BAR_SIZE 20  //保存するデータ数
-graph_bar grbarV = graph_bar(
-                     BAR_VERTICAL,
-                     LOOPTIME_GRAPH,
-                     GRAPH_BARV_POS_X,
-                     GRAPH_BARV_POS_Y,
-                     GRAPH_BARV_LEN_X,
-                     GRAPH_BARV_LEN_Y,
-                     VALUE_BAR_MIN,
-                     VALUE_BAR_MAX,
-                     VALUE_BAR_SIZE
-                   );
-graph_bar grbarS = graph_bar(
-                     BAR_SIDE,
-                     LOOPTIME_GRAPH,
-                     GRAPH_BARS_POS_X,
-                     GRAPH_BARS_POS_Y,
-                     GRAPH_BARS_LEN_X,
-                     GRAPH_BARS_LEN_Y,
-                     VALUE_BAR_MIN,
-                     VALUE_BAR_MAX,
-                     VALUE_BAR_SIZE
-                   );
+#define BAR_PLOT_SIZE 20  //保存するデータ数
+graph_bar grbar[2];
+
 
 //棒グラフのグラフの設定
 //保存するデータ数が可変なので外部で配列を用意している
 //縦方向と横方向は同じデータを使う
-//そのため最大値・平均値も外部に定義した
-int vb1[VALUE_BAR_SIZE];
-int vb2[VALUE_BAR_SIZE];
-int vb3[VALUE_BAR_SIZE];
-int vMax[3];
-int vAve[3];
+int vb1[BAR_PLOT_SIZE];
+int vb2[BAR_PLOT_SIZE];
+int vb3[BAR_PLOT_SIZE];
 
 
 //円グラフ
@@ -172,17 +142,40 @@ void dispGraphLine_init() {
 }
 
 void dispGraphBarV_init() {
-  grbarV.initGraphTime();
-  grbarV.setGraph(GR_1, &vb1[0], &vMax[0], &vAve[0]);
-  grbarV.setGraph(GR_2, &vb2[0], &vMax[1], &vAve[1]);
-  grbarV.setGraph(GR_3, &vb3[0], &vMax[2], &vAve[2]);
+  grbar[0] = graph_bar(
+                     BAR_VERTICAL,
+                     LOOPTIME_GRAPH,
+                     GRAPH_BARV_POS_X,
+                     GRAPH_BARV_POS_Y,
+                     GRAPH_BARV_LEN_X,
+                     GRAPH_BARV_LEN_Y,
+                     VALUE_BAR_MIN,
+                     VALUE_BAR_MAX,
+                     BAR_PLOT_SIZE
+                   );
+
+  grbar[0].initGraphTime();
+  grbar[0].setGraph(GR_1, &vb1[0]);
+  grbar[0].setGraph(GR_2, &vb2[0]);
+  grbar[0].setGraph(GR_3, &vb3[0]);
 }
 
 void dispGraphBarS_init() {
-  grbarS.initGraphTime();
-  grbarS.setGraph(GR_1, &vb1[0], &vMax[0], &vAve[0]);
-  grbarS.setGraph(GR_2, &vb2[0], &vMax[1], &vAve[1]);
-  grbarS.setGraph(GR_3, &vb3[0], &vMax[2], &vAve[2]);
+  grbar[1] = graph_bar(
+                     BAR_SIDE,
+                     LOOPTIME_GRAPH,
+                     GRAPH_BARS_POS_X,
+                     GRAPH_BARS_POS_Y,
+                     GRAPH_BARS_LEN_X,
+                     GRAPH_BARS_LEN_Y,
+                     VALUE_BAR_MIN,
+                     VALUE_BAR_MAX,
+                     BAR_PLOT_SIZE
+                   );
+  grbar[1].initGraphTime();
+  grbar[1].setGraph(GR_1, &vb1[0]);
+  grbar[1].setGraph(GR_2, &vb2[0]);
+  grbar[1].setGraph(GR_3, &vb3[0]);
 }
 
 void dispGraphCircle_init() {
@@ -200,14 +193,14 @@ void dispGraphLine_update() {
 
 //棒グラフ(縦方向)の描画
 void dispGraphBarV_update() {
-  grbarV.dispArea();
-  grbarV.updateGraph();
+  grbar[0].dispArea();
+  grbar[0].updateGraph();
 }
 
 //棒グラフ(横方向)の描画
 void dispGraphBarS_update() {
-  grbarS.dispArea();
-  grbarS.updateGraph();
+  grbar[1].dispArea();
+  grbar[1].updateGraph();
 }
 
 //円グラフの描画
@@ -294,11 +287,16 @@ void loop() {
           grline.updateGraphTime();
           break;
         case BAR_V:
+          grbar[0].addGraphData(GR_1, (int)sampleData[0]);
+          grbar[0].addGraphData(GR_2, (int)sampleData[1]);
+          grbar[0].addGraphData(GR_3, (int)sampleData[2]);
+          grbar[0].updateGraphTime();
+          break;
         case BAR_S:
-          grbarV.addGraphData(GR_1, (int)sampleData[0]);
-          grbarV.addGraphData(GR_2, (int)sampleData[1]);
-          grbarV.addGraphData(GR_3, (int)sampleData[2]);
-          grbarV.updateGraphTime();
+          grbar[1].addGraphData(GR_1, (int)sampleData[0]);
+          grbar[1].addGraphData(GR_2, (int)sampleData[1]);
+          grbar[1].addGraphData(GR_3, (int)sampleData[2]);
+          grbar[1].updateGraphTime();
           break;
         case CIRCLE:
           grcir.addGraphData(GR_1, (int)sampleData[0]);

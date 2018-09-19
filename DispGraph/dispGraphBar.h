@@ -16,6 +16,7 @@ class graph_bar {
 
   public:
     //コンストラクタ
+    graph_bar(){}
     graph_bar(GRAPH_BAR_TYPE _type,
               int _lpTime,
               int _posX,
@@ -28,10 +29,10 @@ class graph_bar {
              ) {
       type = _type;
       lpTime = _lpTime;
-      posX[type] = _posX;
-      posY[type] = _posY;
-      lenX[type] = _lenX;
-      lenY[type] = _lenY;
+      posX = _posX;
+      posY = _posY;
+      lenX = _lenX;
+      lenY = _lenY;
       valueMIN = _valueMIN;
       valueMAX = _valueMAX;
       valueSIZE = _valueSIZE;
@@ -39,8 +40,8 @@ class graph_bar {
     }
 
     //グラフクラスの初期化
-    void setGraph(int _idx, int *_v, int *_vMax, int *_vAve) {
-      _g[_idx].init(&_v[0], _vMax, _vAve);
+    void setGraph(int _idx, int *_v) {
+      _g[_idx].init(&_v[0]);
     }
 
     //グラフデータの追加
@@ -69,26 +70,26 @@ class graph_bar {
       //表示領域
       switch (type) {
         case BAR_VERTICAL:
-          NefryDisplay.drawHorizontalLine(posX[type], posY[type], lenX[type]);
-          NefryDisplay.drawHorizontalLine(posX[type], posY[type] + lenY[type], lenX[type]);
+          NefryDisplay.drawHorizontalLine(posX, posY, lenX);
+          NefryDisplay.drawHorizontalLine(posX, posY + lenY, lenX);
           NefryDisplay.setFont(ArialMT_Plain_10);
-          NefryDisplay.drawString(posX[type] - 22, 0, "Max:");
-          NefryDisplay.drawString(posX[type] - 22, 8, "Ave:");
+          NefryDisplay.drawString(posX - 22, 0, "Max:");
+          NefryDisplay.drawString(posX - 22, 8, "Ave:");
 
-          NefryDisplay.drawString(posX[type] - 22, posY[type], String(valueMAX));
-          NefryDisplay.drawString(posX[type] - 22, posY[type] + lenY[type] - 8, String(valueMIN));
+          NefryDisplay.drawString(posX - 22, posY, String(valueMAX));
+          NefryDisplay.drawString(posX - 22, posY + lenY - 8, String(valueMIN));
 
           break;
 
         case BAR_SIDE:
-          NefryDisplay.drawVerticalLine(posX[type], posY[type], lenY[type]);
-          NefryDisplay.drawVerticalLine(posX[type] + lenX[type], posY[type], lenY[type]);
+          NefryDisplay.drawVerticalLine(posX, posY, lenY);
+          NefryDisplay.drawVerticalLine(posX + lenX, posY, lenY);
           NefryDisplay.setFont(ArialMT_Plain_10);
-          NefryDisplay.drawString(posX[type] + lenX[type] + 2, 0, "Max");
-          NefryDisplay.drawString(posX[type] + lenX[type] + 2, 8, "Ave");
+          NefryDisplay.drawString(posX + lenX + 2, 0, "Max");
+          NefryDisplay.drawString(posX + lenX + 2, 8, "Ave");
 
-          NefryDisplay.drawString(posX[type] + lenX[type] - 22, 5, String(valueMAX));
-          NefryDisplay.drawString(posX[type], 5, String(valueMIN));
+          NefryDisplay.drawString(posX + lenX - 22, 5, String(valueMAX));
+          NefryDisplay.drawString(posX, 5, String(valueMIN));
           break;
       }
 
@@ -115,15 +116,15 @@ class graph_bar {
             }
 
             //最大値と平均値
-            p = map(*_g[_idx].vMax, valueMIN, valueMAX, lenY[type] + posY[type], posY[type]);
-            NefryDisplay.fillRect(posX[type] + ofs - 13, p, 26, 2);
+            p = map(_g[_idx].vMax, valueMIN, valueMAX, lenY + posY, posY);
+            NefryDisplay.fillRect(posX + ofs - 13, p, 26, 2);
             NefryDisplay.setFont(ArialMT_Plain_10);
-            NefryDisplay.drawString(posX[type] + ofs - 15, 0, String(*_g[_idx].vMax));
-            NefryDisplay.drawString(posX[type] + ofs - 15, 8, String(*_g[_idx].vAve));
+            NefryDisplay.drawString(posX + ofs - 15, 0, String(_g[_idx].vMax));
+            NefryDisplay.drawString(posX + ofs - 15, 8, String(_g[_idx].vAve));
 
             //値
-            p = map(*(_g[_idx].v + valueSIZE - 1), valueMIN, valueMAX, lenY[type] + posY[type], posY[type]);
-            NefryDisplay.fillRect(posX[type] + ofs - 13, p, 26, posY[type] + lenY[type] - p);
+            p = map(*(_g[_idx].v + valueSIZE - 1), valueMIN, valueMAX, lenY + posY, posY);
+            NefryDisplay.fillRect(posX + ofs - 13, p, 26, posY + lenY - p);
 
             break;
 
@@ -141,15 +142,15 @@ class graph_bar {
             }
 
             //最大値と平均値
-            p = map(*_g[_idx].vMax, valueMIN, valueMAX, posX[type], lenX[type] + posX[type]);
-            NefryDisplay.fillRect(p, posY[type] + ofs, 2, 10);
+            p = map(_g[_idx].vMax, valueMIN, valueMAX, posX, lenX + posX);
+            NefryDisplay.fillRect(p, posY + ofs, 2, 10);
             NefryDisplay.setFont(ArialMT_Plain_10);
-            NefryDisplay.drawString(posX[type] + lenX[type] + 2, posY[type] + ofs - 5, String(*_g[_idx].vMax));
-            NefryDisplay.drawString(posX[type] + lenX[type] + 2, posY[type] + ofs + 3, String(*_g[_idx].vAve));
+            NefryDisplay.drawString(posX + lenX + 2, posY + ofs - 5, String(_g[_idx].vMax));
+            NefryDisplay.drawString(posX + lenX + 2, posY + ofs + 3, String(_g[_idx].vAve));
 
             //値
-            p = map(*(_g[_idx].v + valueSIZE - 1), valueMIN, valueMAX, 0, lenX[type]);
-            NefryDisplay.fillRect(posX[type], posY[type] + ofs, p, 10);
+            p = map(*(_g[_idx].v + valueSIZE - 1), valueMIN, valueMAX, 0, lenX);
+            NefryDisplay.fillRect(posX, posY + ofs, p, 10);
             break;
         }
       }
@@ -158,14 +159,13 @@ class graph_bar {
   private:
     GRAPH_BAR_TYPE type;
     //グラフ領域・ピッチ
-    //※領域は縦方向・横方向の値を別々に保存する。static変数の使用による支障
-    static int lpTime;
-    static int posX[2];
-    static int posY[2];
-    static int lenX[2];
-    static int lenY[2];
-    static int valueMIN;
-    static int valueMAX;
+    int lpTime;
+    int posX;
+    int posY;
+    int lenX;
+    int lenY;
+    int valueMIN;
+    int valueMAX;
     static int valueSIZE;
 
     //時間
@@ -178,40 +178,38 @@ class graph_bar {
       public:
         bool isSet;
         int *v; //頂点の値
-        int *vMax;  //最大値
-        int *vAve;  //平均値
+        int vMax;  //最大値
+        int vAve;  //平均値
 
         //コンストラクタ
         graph() {
           isSet = false;
         }
 
-        void init(int *_v, int *_vMax, int *_vAve) {
+        void init(int *_v) {
           isSet = true;
           v = _v;
-          vMax = _vMax;
-          vAve = _vAve;
+          vMax = 0;
+          vAve = 0;
 
           for (int i = 0; i < valueSIZE; i++) {
             *(v + i) = 0;
           }
-          *vMax = 0;
-          *vAve = 0;
         }
 
         void addData(int _v) {
-          *vMax = _v;  //最大値に仮設定
-          *vAve = 0;
+          vMax = _v;  //最大値に仮設定
+          vAve = 0;
           //前にずらす
           for (int i = 0; i < valueSIZE - 1; i++) {
             *(v + i) = *(v + i + 1);
-            if (*(v + i) > *vMax) *vMax = *(v + i);
-            *vAve += *(v + i);
+            if (*(v + i) > vMax) vMax = *(v + i);
+            vAve += *(v + i);
           }
           //最後尾に追加する
           *(v + valueSIZE - 1) = _v;
-          *vAve += *(v + valueSIZE - 1);
-          *vAve /= valueSIZE;
+          vAve += *(v + valueSIZE - 1);
+          vAve /= valueSIZE;
         }
     };
     graph _g[GRAPH_BAR_CNT];
