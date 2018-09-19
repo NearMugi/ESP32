@@ -12,7 +12,7 @@ NefrySetting nefrySetting(setting);
 //mqtt
 #define NEFRY_DATASTORE_BEEBOTTE_DICE 0
 #define BBT "mqtt.beebotte.com"
-#define QoS 1
+#define QoS 0
 String bbt_token;
 #define Channel "Dice"
 #define Res "act"
@@ -22,7 +22,7 @@ PubSubClient client(espClient);
 String msg;
 String tmpSendData = "[@1,@2]";
 #define WAIT_NEXTTIME_MS 5000 //publishからの待ち時間(ms)
-uint16_t waitTime; //一度publishしてからの待ち時間
+unsigned long waitTime; //一度publishしてからの待ち時間
 bool isAct = false;
 #define MSG_ACCEPT "Accepting actions..."
 #define MSG_WAIT "Wait Next Time..."

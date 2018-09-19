@@ -39,7 +39,7 @@ int idx;
 void dispGraph_init() {
   idx = 0;
   for (int i = 0; i < GRAPH_MAX_X; i++) {
-    v[i] = 0;
+    v[i] = GRAPH_MAX_Y;
   }
 }
 
