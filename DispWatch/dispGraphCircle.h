@@ -23,15 +23,6 @@ class graph_circle {
       _g[_idx].setDeg(_v);
     }
 
-    //補助線を引く
-    void dispArea() {
-      //表示領域
-      NefryDisplay.setFont(ArialMT_Plain_10);
-      NefryDisplay.drawString(0, 0, String(_g[0].value));
-      NefryDisplay.drawString(42, 0, String(_g[1].value));
-      NefryDisplay.drawString(84, 0, String(_g[2].value));
-    }
-
     //グラフデータの描画
     void updateGraph() {
       float rad = 0.0;
@@ -39,12 +30,10 @@ class graph_circle {
       for (int _idx = 0; _idx < GRAPH_CIR_CNT; _idx++) {
         if (!_g[_idx].isSet) continue;
 
-        NefryDisplay.drawCircle(_g[_idx].p[0], _g[_idx].p[1], _g[_idx].r);
-
         //中を線で塗りつぶし
         if (_g[_idx].isFill) {
           //角度を90度ずらしているので開始は-90から。
-          for (int i = -90; i < _g[_idx].deg; i++) {
+          for (int i = -90; i < _g[_idx].deg; i = i + 12) {
             rad = i * PI / 180;
             NefryDisplay.drawLine(_g[_idx].p[0], _g[_idx].p[1],
                                   _g[_idx].p[0] + _g[_idx].r * cos(rad), _g[_idx].p[1] + _g[_idx].r * sin(rad));

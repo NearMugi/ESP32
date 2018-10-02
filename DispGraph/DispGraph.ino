@@ -179,10 +179,10 @@ void dispGraphBarS_init() {
 }
 
 void dispGraphCircle_init() {
-  //グラフ番号・頂点座標(x,y)・半径(r)・対象の値(最小値,最大値)
-  grcir.setGraph(GR_1, 20, 35, 20, 0, 1023);
-  grcir.setGraph(GR_2, 62, 35, 20, 0, 1023);
-  grcir.setGraph(GR_3, 104, 35, 20, 0, 1023);
+  //グラフ番号・頂点座標(x,y)・半径(r)・対象の値(最小値,最大値)・塗りつぶし有り無し
+  grcir.setGraph(GR_1, 20, 35, 20, 0, 1023,false);
+  grcir.setGraph(GR_2, 62, 35, 20, 0, 1023,true);
+  grcir.setGraph(GR_3, 104, 35, 20, 0, 1023,true);
 }
 
 //折れ線グラフの描画
