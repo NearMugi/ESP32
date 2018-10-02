@@ -3,9 +3,10 @@
 #include <NefrySetting.h>
 void setting() {
   Nefry.disableDisplayStatus();
-  Nefry.disableWifi();
 }
 NefrySetting nefrySetting(setting);
+
+#define DEBUG false
 
 //date
 #include <time.h>
@@ -92,16 +93,7 @@ void loop() {
   //データ・グラフ更新
   interval<LOOPTIME>::run([] {
     if (!isStopGraph) {
-#if false
-      //日付を取得する
-      time_t  t = time(NULL);
-      struct tm *tm;
-      tm = localtime(&t);
-      Hour = tm->tm_hour;
-      Min = tm->tm_min;
-      Sec = tm->tm_sec;
-#endif
-
+#if DEBUG
       //debug
       if (++Sec >= 60) {
         Sec = 0;
@@ -112,6 +104,16 @@ void loop() {
           }
         }
       }
+
+#else
+      //日付を取得する
+      time_t  t = time(NULL);
+      struct tm *tm;
+      tm = localtime(&t);
+      Hour = tm->tm_hour;
+      Min = tm->tm_min;
+      Sec = tm->tm_sec;
+#endif
 
       //24h -> 12h表記にする
       uint8_t _tmpHour = Hour % 12;
