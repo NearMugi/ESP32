@@ -17,14 +17,6 @@ NefrySetting nefrySetting(setting);
 #define LOOPTIME 10000
 
 //clock
-#define CL_HOUR 0
-#define CL_MIN 1
-#define CL_SEC 2
-//左上の座標と円サイズ
-#define CL_X 32
-#define CL_Y 32
-#define CL_R 30
-
 uint8_t Hour = 0;
 uint8_t Min = 0;
 uint8_t Sec = 0;
@@ -34,8 +26,8 @@ uint8_t Sec = 0;
 //グラフ一時停止
 bool isStopGraph = false;
 
-#include "dispGraphCircle.h"
-graph_circle grcir = graph_circle();
+#include "dispGraphCircle_Watch.h"
+graph_circle_watch grwatch = graph_circle_watch();
 
 void setup() {
   Nefry.enableSW();
@@ -46,18 +38,18 @@ void setup() {
   NefryDisplay.clear();
   NefryDisplay.display();
 
-  dispGraphCircle_init();
+  dispWatch_init();
 
   //date
   configTime( JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
 
 }
 
-void dispGraphCircle_init() {
+void dispWatch_init() {
   //グラフ番号・頂点座標(x,y)・半径(r)・対象の値(最小値,最大値)・塗りつぶし有り無し
-  grcir.setGraph(CL_HOUR, CL_X, CL_Y, 20, 0, 60, false);
-  grcir.setGraph(CL_MIN, CL_X, CL_Y, 25, 0, 60, false);
-  grcir.setGraph(CL_SEC, CL_X, CL_Y, 10, 0, 60, true);
+  grwatch.setGraph(CL_HOUR, CL_X, CL_Y, 20, 0, 60, false);
+  grwatch.setGraph(CL_MIN, CL_X, CL_Y, 25, 0, 60, false);
+  grwatch.setGraph(CL_SEC, CL_X, CL_Y, 10, 0, 60, true);
 }
 
 void DispNefryDisplay() {
@@ -66,7 +58,7 @@ void DispNefryDisplay() {
   NefryDisplay.drawCircle(CL_X, CL_Y, CL_R);
 
   //時計の針の描画
-  grcir.updateGraph();
+  grwatch.updateGraph();
 
   NefryDisplay.setFont(ArialMT_Plain_24);
   String _tmpH = String(Hour);
@@ -120,9 +112,9 @@ void loop() {
       //分に合わせて時間の針を進める
       _tmpHour = _tmpHour * 5 + Min / 12;
 
-      grcir.addGraphData(CL_HOUR, (int)_tmpHour);
-      grcir.addGraphData(CL_MIN, (int)Min);
-      grcir.addGraphData(CL_SEC, (int)Sec);
+      grwatch.addGraphData(CL_HOUR, (int)_tmpHour);
+      grwatch.addGraphData(CL_MIN, (int)Min);
+      grwatch.addGraphData(CL_SEC, (int)Sec);
     }
 
     DispNefryDisplay();
