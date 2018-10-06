@@ -55,14 +55,6 @@ class graph_circle_watch {
         _x = _g[_idx].p[0] + (float)_g[_idx].r * cos(rad);
         _y = _g[_idx].p[1] + (float)_g[_idx].r * sin(rad);
         NefryDisplay.drawLine(_g[_idx].p[0], _g[_idx].p[1], (int)_x, (int)_y);
-
-        //秒針は枠に丸ぽちをつける
-        if (_idx == CL_SEC) {
-          _x = _g[_idx].p[0] + (float)CL_R * cos(rad);
-          _y = _g[_idx].p[1] + (float)CL_R * sin(rad);
-          NefryDisplay.fillRect((int)_x - 2, (int)_y - 2, 4, 4);
-        }
-
       }
 
 
