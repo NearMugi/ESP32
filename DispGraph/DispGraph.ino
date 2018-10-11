@@ -41,7 +41,9 @@ long sampleData[3];
 float deg = 0;
 
 
+//++++++++++++++++++++++++++++++++++++++++++++
 //折れ線グラフ
+//++++++++++++++++++++++++++++++++++++++++++++
 #include "dispGraphLine.h"
 #include "dispGraphBar.h"
 //static変数を定義
@@ -73,15 +75,29 @@ graph_line grline = graph_line(
                       &t[0]
                     );
 
-//折れ線グラフのグラフの設定
+//グラフの設定
 //頂点の数が可変なので外部で配列を用意している
 int v1[LINE_PLOT_SIZE]; //頂点の値
 int v2[LINE_PLOT_SIZE]; //頂点の値
 int v3[LINE_PLOT_SIZE]; //頂点の値
 
+//グラフの初期化
+void dispGraphLine_init() {
+  grline.initGraphTime();
+  grline.setGraph(GR_1, &v1[0], VERTEX_CIR, DISP_MAX);
+  grline.setGraph(GR_2, &v2[0], VERTEX_NONE, NOTDISP_MAX);
+  grline.setGraph(GR_3, &v3[0], VERTEX_NONE, NOTDISP_MAX);
+}
 
+//グラフの描画
+void dispGraphLine_update() {
+  grline.dispArea();
+  grline.updateGraph();
+}
 
+//++++++++++++++++++++++++++++++++++++++++++++
 //棒グラフ
+//++++++++++++++++++++++++++++++++++++++++++++
 #include "dispGraphBar.h"
 //static変数を定義
 int graph_bar::valueSIZE;
@@ -103,17 +119,82 @@ int graph_bar::valueSIZE;
 graph_bar grbar[2];
 
 
-//棒グラフのグラフの設定
+//グラフの設定
 //保存するデータ数が可変なので外部で配列を用意している
 //縦方向と横方向は同じデータを使う
 int vb1[BAR_PLOT_SIZE];
 int vb2[BAR_PLOT_SIZE];
 int vb3[BAR_PLOT_SIZE];
 
+//グラフの初期化
+void dispGraphBarV_init() {
+  grbar[0] = graph_bar(
+               BAR_VERTICAL,
+               LOOPTIME_GRAPH,
+               GRAPH_BARV_POS_X,
+               GRAPH_BARV_POS_Y,
+               GRAPH_BARV_LEN_X,
+               GRAPH_BARV_LEN_Y,
+               VALUE_BAR_MIN,
+               VALUE_BAR_MAX,
+               BAR_PLOT_SIZE
+             );
 
+  grbar[0].initGraphTime();
+  grbar[0].setGraph(GR_1, &vb1[0]);
+  grbar[0].setGraph(GR_2, &vb2[0]);
+  grbar[0].setGraph(GR_3, &vb3[0]);
+}
+
+void dispGraphBarS_init() {
+  grbar[1] = graph_bar(
+               BAR_SIDE,
+               LOOPTIME_GRAPH,
+               GRAPH_BARS_POS_X,
+               GRAPH_BARS_POS_Y,
+               GRAPH_BARS_LEN_X,
+               GRAPH_BARS_LEN_Y,
+               VALUE_BAR_MIN,
+               VALUE_BAR_MAX,
+               BAR_PLOT_SIZE
+             );
+  grbar[1].initGraphTime();
+  grbar[1].setGraph(GR_1, &vb1[0]);
+  grbar[1].setGraph(GR_2, &vb2[0]);
+  grbar[1].setGraph(GR_3, &vb3[0]);
+}
+
+//棒グラフ(縦方向)の描画
+void dispGraphBarV_update() {
+  grbar[0].dispArea();
+  grbar[0].updateGraph();
+}
+
+//棒グラフ(横方向)の描画
+void dispGraphBarS_update() {
+  grbar[1].dispArea();
+  grbar[1].updateGraph();
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++
 //円グラフ
+//++++++++++++++++++++++++++++++++++++++++++++
 #include "dispGraphCircle.h"
 graph_circle grcir = graph_circle();
+
+//グラフの初期化
+void dispGraphCircle_init() {
+  //グラフ番号・頂点座標(x,y)・半径(r)・対象の値(最小値,最大値)・塗りつぶし有り無し
+  grcir.setGraph(GR_1, 20, 35, 20, 0, 1023, false);
+  grcir.setGraph(GR_2, 62, 35, 20, 0, 1023, true);
+  grcir.setGraph(GR_3, 104, 35, 20, 0, 1023, true);
+}
+
+//グラフの描画
+void dispGraphCircle_update() {
+  grcir.dispArea();
+  grcir.updateGraph();
+}
 
 void setup() {
   Nefry.enableSW();
@@ -131,105 +212,6 @@ void setup() {
 
   //サンプルデータ生成用乱数シード
   randomSeed(analogRead(0));
-}
-
-//グラフの初期化
-void dispGraphLine_init() {
-  grline.initGraphTime();
-  grline.setGraph(GR_1, &v1[0], VERTEX_CIR, DISP_MAX);
-  grline.setGraph(GR_2, &v2[0], VERTEX_NONE, NOTDISP_MAX);
-  grline.setGraph(GR_3, &v3[0], VERTEX_NONE, NOTDISP_MAX);
-}
-
-void dispGraphBarV_init() {
-  grbar[0] = graph_bar(
-                     BAR_VERTICAL,
-                     LOOPTIME_GRAPH,
-                     GRAPH_BARV_POS_X,
-                     GRAPH_BARV_POS_Y,
-                     GRAPH_BARV_LEN_X,
-                     GRAPH_BARV_LEN_Y,
-                     VALUE_BAR_MIN,
-                     VALUE_BAR_MAX,
-                     BAR_PLOT_SIZE
-                   );
-
-  grbar[0].initGraphTime();
-  grbar[0].setGraph(GR_1, &vb1[0]);
-  grbar[0].setGraph(GR_2, &vb2[0]);
-  grbar[0].setGraph(GR_3, &vb3[0]);
-}
-
-void dispGraphBarS_init() {
-  grbar[1] = graph_bar(
-                     BAR_SIDE,
-                     LOOPTIME_GRAPH,
-                     GRAPH_BARS_POS_X,
-                     GRAPH_BARS_POS_Y,
-                     GRAPH_BARS_LEN_X,
-                     GRAPH_BARS_LEN_Y,
-                     VALUE_BAR_MIN,
-                     VALUE_BAR_MAX,
-                     BAR_PLOT_SIZE
-                   );
-  grbar[1].initGraphTime();
-  grbar[1].setGraph(GR_1, &vb1[0]);
-  grbar[1].setGraph(GR_2, &vb2[0]);
-  grbar[1].setGraph(GR_3, &vb3[0]);
-}
-
-void dispGraphCircle_init() {
-  //グラフ番号・頂点座標(x,y)・半径(r)・対象の値(最小値,最大値)・塗りつぶし有り無し
-  grcir.setGraph(GR_1, 20, 35, 20, 0, 1023,false);
-  grcir.setGraph(GR_2, 62, 35, 20, 0, 1023,true);
-  grcir.setGraph(GR_3, 104, 35, 20, 0, 1023,true);
-}
-
-//折れ線グラフの描画
-void dispGraphLine_update() {
-  grline.dispArea();
-  grline.updateGraph();
-}
-
-//棒グラフ(縦方向)の描画
-void dispGraphBarV_update() {
-  grbar[0].dispArea();
-  grbar[0].updateGraph();
-}
-
-//棒グラフ(横方向)の描画
-void dispGraphBarS_update() {
-  grbar[1].dispArea();
-  grbar[1].updateGraph();
-}
-
-//円グラフの描画
-void dispGraphCircle_update() {
-  grcir.dispArea();
-  grcir.updateGraph();
-}
-
-void DispNefryDisplay() {
-  NefryDisplay.clear();
-  switch (dispType) {
-    case LINE:
-      dispGraphLine_update();
-      break;
-    case BAR_V:
-      dispGraphBarV_update();
-      break;
-    case BAR_S:
-      dispGraphBarS_update();
-      break;
-    case CIRCLE:
-      dispGraphCircle_update();
-      break;
-    default:
-      NefryDisplay.setFont(ArialMT_Plain_16);
-      NefryDisplay.drawString(0, 0, "Select GraphType...");
-      break;
-  }
-  NefryDisplay.display();
 }
 
 
@@ -306,6 +288,27 @@ void loop() {
       }
     }
 
-    DispNefryDisplay();
+    //描画する
+    NefryDisplay.clear();
+    switch (dispType) {
+      case LINE:
+        dispGraphLine_update();
+        break;
+      case BAR_V:
+        dispGraphBarV_update();
+        break;
+      case BAR_S:
+        dispGraphBarS_update();
+        break;
+      case CIRCLE:
+        dispGraphCircle_update();
+        break;
+      default:
+        NefryDisplay.setFont(ArialMT_Plain_16);
+        NefryDisplay.drawString(0, 0, "Select GraphType...");
+        break;
+    }
+    NefryDisplay.display();
+
   });
 }
