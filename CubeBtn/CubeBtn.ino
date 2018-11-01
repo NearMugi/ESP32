@@ -28,10 +28,10 @@ NefrySetting nefrySetting(setting);
 //ループ周期(us)
 #include "interval.h"
 #define LOOPTIME_DISP  100000
-#define LOOPTIME_JIKI  10000
-#define LOOPTIME_BTN   10000
+#define LOOPTIME_JIKI  30000
+#define LOOPTIME_BTN   30000
 #define LOOPTIME_LED   100000
-#define LOOPTIME_MQTT  100000
+#define LOOPTIME_MQTT  500000
 
 //ステータス
 #define STATUS_NONE "NONE"
@@ -56,13 +56,13 @@ unsigned long waitingTime;
 #define JIKI_PTN6 6
 
 //閾値
-int jikiPtnNone[2] = {490, 510};
-int jikiPtn1[2] = {490, 510};
-int jikiPtn2[2] = {490, 510};
-int jikiPtn3[2] = {490, 510};
-int jikiPtn4[2] = {490, 510};
-int jikiPtn5[2] = {490, 510};
-int jikiPtn6[2] = {490, 510};
+int jikiPtnNone[2] = {2500, 2750};
+int jikiPtn1[2] = {0, 500};
+int jikiPtn2[2] = {500, 1500};
+int jikiPtn3[2] = {1500, 2500};
+int jikiPtn4[2] = {2750, 3500};
+int jikiPtn5[2] = {3500, 3800};
+int jikiPtn6[2] = {3800, 4098};
 
 //保存するデータ数は1秒分
 #define JIKI_SIZE (1000000 / LOOPTIME_JIKI)
@@ -101,7 +101,7 @@ int graph_line::valueSIZE;
 #define GRAPH_LEN_DPP 10 //点をプロットする間隔(1なら1ドットにつき1点、2なら2ドットにつき1点)
 
 #define VALUE_LINE_MIN 0
-#define VALUE_LINE_MAX 1023
+#define VALUE_LINE_MAX 4098 //esp32は分解能12bit
 #define LINE_PLOT_SIZE (GRAPH_LINE_LEN_X / GRAPH_LEN_DPP) + 1
 int x[LINE_PLOT_SIZE];  //x座標
 int t[LINE_PLOT_SIZE];  //一定間隔に垂線を引くための配列(垂線の有無)
@@ -140,9 +140,9 @@ void dispGraphLine_update() {
 //++++++++++++++++++++++++++++++++++++++++++++
 #define NEFRY_DATASTORE_BEEBOTTE_CUBEBTN 1
 #define BBT "mqtt.beebotte.com"
-#define QoS 1
+#define QoS 2
 String bbt_token;
-#define Channel "CubeBtn"
+#define Channel "CubeButton"
 #define Res "ptn"
 char topic[64];
 WiFiClient espClient;
@@ -187,7 +187,8 @@ void publish()
   root.printTo(buffer, sizeof(buffer));
 
   MsgPublishData = String(buffer);
-
+  Serial.println(MsgPublishData);
+  
   // Now publish the char buffer to Beebotte
   client.publish(topic, buffer, QoS);
 }
@@ -230,9 +231,7 @@ void setup() {
   //date
   configTime( JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
 
-  //IPアドレス(ディスプレイに表示)
-  IPAddress ip = WiFi.localIP();
-  ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
+
 
   //グラフ
   dispGraphLine_init();
@@ -243,6 +242,11 @@ void setup() {
 
 
 void loopDisplay() {
+  
+  //IPアドレス
+  IPAddress ip = WiFi.localIP();
+  ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
+  
   //グラフデータの更新
   grline.addGraphData(0, jiki[JIKI_SIZE - 1]);
   grline.setAvg(0, jikiAvg);
@@ -266,12 +270,15 @@ void loopDisplay() {
 
 void loopJikiSensor() {
   //データ保存と平均値の算出
+  int _v = analogRead(PIN_JIKI);
+  //Serial.println(_v);
   jikiAvg = 0;
   for (int i = 0; i < JIKI_SIZE - 1; i++) {
     jiki[i] = jiki[i + 1];
     jikiAvg += jiki[i + 1];
   }
-  jiki[JIKI_SIZE - 1] = analogRead(PIN_JIKI);
+  
+  jiki[JIKI_SIZE - 1] = _v;
   jikiAvg += jiki[JIKI_SIZE - 1];
   jikiAvg /= JIKI_SIZE;
 

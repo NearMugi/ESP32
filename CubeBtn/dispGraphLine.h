@@ -100,8 +100,8 @@ class graph_line {
       NefryDisplay.drawHorizontalLine(posX, posY, lenX);
       NefryDisplay.drawHorizontalLine(posX, posY + lenY, lenX);
       NefryDisplay.setFont(ArialMT_Plain_10);
-      NefryDisplay.drawString(posX - 22, posY - 8, String(valueMAX));
-      NefryDisplay.drawString(posX - 22, posY + lenY - 8, String(valueMIN));
+      NefryDisplay.drawString(posX - 24, posY - 8, String(valueMAX));
+      NefryDisplay.drawString(posX - 24, posY + lenY - 8, String(valueMIN));
 
       //時間
       //NefryDisplay.drawString(posX + lenX - 18, 0, String(tTotal));
@@ -124,7 +124,7 @@ class graph_line {
         _tmpAvg = map(_g[_idx].vAvg, valueMIN, valueMAX, lenY + posY, posY);
         NefryDisplay.drawHorizontalLine(posX, _tmpAvg, lenX);
         NefryDisplay.setFont(ArialMT_Plain_10);
-        NefryDisplay.drawString(posX - 20, _tmpAvg - 8, String(_g[_idx].vAvg));
+        NefryDisplay.drawString(posX - 24, _tmpAvg - 8, String(_g[_idx].vAvg));
         
         //各座標を線で結ぶ  
         int y0 = lenY + posY;
