@@ -104,7 +104,7 @@ class graph_line {
       NefryDisplay.drawString(posX - 22, posY + lenY - 8, String(valueMIN));
 
       //時間
-      NefryDisplay.drawString(posX + lenX - 18, 0, String(tTotal));
+      //NefryDisplay.drawString(posX + lenX - 18, 0, String(tTotal));
       for (int i = 0; i < valueSIZE; i++) {
         if (*(t + i) > 0) {
           NefryDisplay.drawVerticalLine(*(x + i), posY, lenY);
@@ -119,7 +119,6 @@ class graph_line {
     void updateGraph() {
       for (int _idx = 0; _idx < GRAPH_LINE_CNT; _idx++) {
         if (!_g[_idx].isSet) continue;
-
         //平均値
         int _tmpAvg = lenY + posY;
         _tmpAvg = map(_g[_idx].vAvg, valueMIN, valueMAX, lenY + posY, posY);

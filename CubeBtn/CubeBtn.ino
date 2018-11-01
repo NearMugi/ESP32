@@ -29,16 +29,16 @@ NefrySetting nefrySetting(setting);
 #include "interval.h"
 #define LOOPTIME_DISP  100000
 #define LOOPTIME_JIKI  10000
-#define LOOPTIME_BTN   100000
+#define LOOPTIME_BTN   10000
 #define LOOPTIME_LED   100000
-#define LOOPTIME_MQTT  10000
+#define LOOPTIME_MQTT  100000
 
 //ステータス
 #define STATUS_NONE "NONE"
-#define STATUS_TAIKI "Wait"
-#define STATUS_BTN_ON "Press"
-#define STATUS_MQTT_SUC "Send"
-String nowStatus = STATUS_NONE;
+#define STATUS_TAIKI "WAIT"
+#define STATUS_BTN_ON "PRESS"
+#define STATUS_MQTT_SUC "SEND"
+String nowStatus = STATUS_TAIKI;
 
 //MQTT送信中の待ち時間(ms)
 #define WAIT_MQTT_PUBLISH 5000
@@ -76,6 +76,8 @@ int jikiPtn = JIKI_NONE;
 #define BTN_OFF 0
 #define BTN_DOWN 1
 int btnPtn = BTN_OFF;
+#define BTN_CNT 5 //チャタリング対策
+int btnCnt = 0;
 
 //++++++++++++++++++++++++++++++++++++++++++++
 //ディスプレイ
@@ -231,6 +233,9 @@ void setup() {
   //IPアドレス(ディスプレイに表示)
   IPAddress ip = WiFi.localIP();
   ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
+
+  //グラフ
+  dispGraphLine_init();
 }
 
 
@@ -238,7 +243,7 @@ void setup() {
 
 
 void loopDisplay() {
-  //グラフの更新
+  //グラフデータの更新
   grline.addGraphData(0, jiki[JIKI_SIZE - 1]);
   grline.setAvg(0, jikiAvg);
   grline.updateGraphTime();
@@ -247,14 +252,14 @@ void loopDisplay() {
   NefryDisplay.clear();
 
   NefryDisplay.setFont(ArialMT_Plain_10);
-  NefryDisplay.drawString(0, 0, ipStr);
+  NefryDisplay.drawString(0, 0, String(jikiPtn));
+  NefryDisplay.drawString(7, 0, nowStatus);
+  NefryDisplay.drawString(45, 0, ipStr);
   NefryDisplay.drawString(0, 10, MsgMqtt);
-  NefryDisplay.drawString(0, 20, String(jikiPtn));
-  NefryDisplay.drawString(15, 20, nowStatus);
   //  NefryDisplay.drawString(0, 30, MsgPublishData);
 
-  grline.dispArea();
-  grline.updateGraph();
+  //グラフの描画
+  dispGraphLine_update();
 
   NefryDisplay.display();
 }
@@ -307,10 +312,22 @@ void loopJikiSensor() {
 
 void loopBtn() {
   bool btn = digitalRead(PIN_BTN);
+
+  //チャタリング対策
+  //押したとき複数回認識してからONにする
   if (btn) {
-    Nefry.setLed(255, 128, 0);
+    if (++btnCnt >= BTN_CNT) {
+      btn = true;
+      btnCnt = BTN_CNT;
+    } else {
+      btn = false;
+    }
+  }
+
+  if (btn) {
+    Nefry.setLed(128, 0, 255);
   } else {
-    Nefry.setLed(0, 0, 0);
+    Nefry.setLed(0, 255, 0);
   }
 
   //MQTT送信中の時はボタンを無効にする
@@ -385,6 +402,12 @@ void loopMQTT() {
       return;
     }
 
+    //接続できていない。
+    if (!client.connected()) {
+      nowStatus = STATUS_TAIKI;
+      return;
+    }
+
     publish();
     nowStatus = STATUS_MQTT_SUC;
     waitingTime = millis();
@@ -393,7 +416,6 @@ void loopMQTT() {
 
 
 void loop() {
-  if (!client.connected()) reconnect();
 
   //Display
   interval<LOOPTIME_DISP>::run([] {
@@ -417,6 +439,7 @@ void loop() {
 
   //MQTT publish
   interval<LOOPTIME_MQTT>::run([] {
+    if (!client.connected()) reconnect();
     loopMQTT();
   });
 }
