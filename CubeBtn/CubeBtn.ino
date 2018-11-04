@@ -1,4 +1,8 @@
 //磁気センサーを用いた、キューブ型ボタン
+//publishするときにtopicを変える
+//1～4:早起きボタン
+//5:給食
+//6:？？？
 
 #include <Nefry.h>
 #include <NefryDisplay.h>
@@ -143,8 +147,10 @@ void dispGraphLine_update() {
 #define QoS 2
 String bbt_token;
 #define Channel "CubeButton"
-#define Res "ptn"
-char topic[64];
+#define ResUser "user"
+char topic_user[64];
+#define ResFood "food"
+char topic_food[64];
 WiFiClient espClient;
 PubSubClient client(espClient);
 
@@ -178,7 +184,8 @@ void publish()
   StaticJsonBuffer<128> jsonOutBuffer;
   JsonObject& root = jsonOutBuffer.createObject();
 
-  root["ptn"] = jikiPtn;
+  //パターンごとに送信するトピックを変更する
+  root["user"] = jikiPtn;
   root["ispublic"] = true;
   root["ts"] = t;
 
@@ -190,7 +197,8 @@ void publish()
   Serial.println(MsgPublishData);
   
   // Now publish the char buffer to Beebotte
-  client.publish(topic, buffer, QoS);
+  //パターンごとに送信するトピックを変更する
+  client.publish(topic_user, buffer, QoS);
 }
 
 //date
@@ -225,7 +233,8 @@ void setup() {
 
   //mqtt
   client.setServer(BBT, 1883);
-  sprintf(topic, "%s/%s", Channel, Res);
+  sprintf(topic_user, "%s/%s", Channel, ResUser);
+  sprintf(topic_food, "%s/%s", Channel, ResFood);
   Nefry.setStoreTitle("Token_CubeButton", NEFRY_DATASTORE_BEEBOTTE_CUBEBTN);
 
   //date
