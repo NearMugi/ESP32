@@ -250,7 +250,6 @@ void publish()
 //date
 #include <time.h>
 #define JST     3600*9
-#define EST     3600*(-5)
 
 void setup() {
   Nefry.setProgramName("Trigger CubeButton");
@@ -274,13 +273,13 @@ void setup() {
   pinMode(PIN_LED_PTN6, OUTPUT);
 
   //mqtt
-  client.setServer(BBT, 8883);
+  client.setServer(BBT, 1883);
   sprintf(topic_user, "%s/%s", Channel, ResUser);
   sprintf(topic_food, "%s/%s", Channel, ResFood);
   Nefry.setStoreTitle("Token_CubeButton", NEFRY_DATASTORE_BEEBOTTE_CUBEBTN);
 
   //date
-  configTime( EST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
+  configTime( JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
 
 
 
