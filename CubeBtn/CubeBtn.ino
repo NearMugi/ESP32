@@ -51,21 +51,22 @@ unsigned long waitingTime;
 //++++++++++++++++++++++++++++++++++++++++++++
 //磁気センサ
 //++++++++++++++++++++++++++++++++++++++++++++
-#define JIKI_NONE 0
+#define JIKI_DEF 0
 #define JIKI_PTN1 1
 #define JIKI_PTN2 2
 #define JIKI_PTN3 3
 #define JIKI_PTN4 4
 #define JIKI_PTN5 5
 #define JIKI_PTN6 6
+#define JIKI_NONE 9
 
 //閾値
-int jikiPtnNone[2] = {2500, 2750};
-int jikiPtn1[2] = {0, 500};
-int jikiPtn2[2] = {500, 1500};
-int jikiPtn3[2] = {1500, 2500};
-int jikiPtn4[2] = {2750, 3500};
-int jikiPtn5[2] = {3500, 3800};
+int jikiPtnDef[2] = {2700, 2750};
+int jikiPtn1[2] = {1650, 1750};
+int jikiPtn2[2] = {2150, 2250};
+int jikiPtn3[2] = {2550, 2650};
+int jikiPtn4[2] = {2800, 2900};
+int jikiPtn5[2] = {3300, 3550};
 int jikiPtn6[2] = {3800, 4098};
 
 //保存するデータ数は1秒分
@@ -292,8 +293,8 @@ void loopJikiSensor() {
   jikiAvg /= JIKI_SIZE;
 
   //パターンの判定
-  if (jikiAvg >= jikiPtnNone[0] && jikiAvg <= jikiPtnNone[1]) {
-    jikiPtn = JIKI_NONE;
+  if (jikiAvg >= jikiPtnDef[0] && jikiAvg <= jikiPtnDef[1]) {
+    jikiPtn = JIKI_DEF;
     return;
   }
   if (jikiAvg >= jikiPtn1[0] && jikiAvg <= jikiPtn1[1]) {
