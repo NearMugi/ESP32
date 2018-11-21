@@ -192,7 +192,9 @@ void publish()
   uint8_t wd = tm->tm_wday;
   uint8_t hour = tm->tm_hour;
 
+  //パターンごとに送信するトピックを変更する
   switch (jikiPtn) {
+    //早起きボタン
     case JIKI_PTN1:
     case JIKI_PTN2:
     case JIKI_PTN3:
@@ -208,6 +210,7 @@ void publish()
       client.publish(topic_user, buffer, QoS);
       break;
 
+    //給食
     case JIKI_PTN5:
       {
         uint8_t plusDay = 0;
@@ -239,23 +242,6 @@ void publish()
       break;
   }
 
-  //パターンごとに送信するトピックを変更する
-  switch (jikiPtn) {
-    //早起きボタン
-    case JIKI_PTN1:
-    case JIKI_PTN2:
-    case JIKI_PTN3:
-    case JIKI_PTN4:
-      break;
-
-    //給食
-    case JIKI_PTN5:
-      break;
-
-
-
-  }
-
   MsgPublishData = String(buffer);
   Serial.println(MsgPublishData);
 
@@ -264,11 +250,6 @@ void publish()
 //date
 #include <time.h>
 #define JST     3600*9
-
-
-
-
-
 
 void setup() {
   Nefry.setProgramName("Trigger CubeButton");
