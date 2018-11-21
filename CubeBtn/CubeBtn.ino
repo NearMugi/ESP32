@@ -250,6 +250,7 @@ void publish()
 //date
 #include <time.h>
 #define JST     3600*9
+#define EST     3600*(-5)
 
 void setup() {
   Nefry.setProgramName("Trigger CubeButton");
@@ -279,7 +280,7 @@ void setup() {
   Nefry.setStoreTitle("Token_CubeButton", NEFRY_DATASTORE_BEEBOTTE_CUBEBTN);
 
   //date
-  configTime( JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
+  configTime( EST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
 
 
 
