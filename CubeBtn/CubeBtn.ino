@@ -292,7 +292,7 @@ void setup() {
   pinMode(PIN_LED_PTN6, OUTPUT);
 
   //mqtt
-  client.setServer(BBT, 1883);
+  client.setServer(BBT, 8883);
   sprintf(topic_user, "%s/%s", Channel, ResUser);
   sprintf(topic_food, "%s/%s", Channel, ResFood);
   Nefry.setStoreTitle("Token_CubeButton", NEFRY_DATASTORE_BEEBOTTE_CUBEBTN);
