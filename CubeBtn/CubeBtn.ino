@@ -179,27 +179,86 @@ void reconnect() {
 
 void publish()
 {
-  //日付を取得する
-  time_t  t = time(NULL);
-
+  char buffer[128];
   StaticJsonBuffer<128> jsonOutBuffer;
   JsonObject& root = jsonOutBuffer.createObject();
 
-  //パターンごとに送信するトピックを変更する
-  root["user"] = jikiPtn;
-  root["ispublic"] = true;
-  root["ts"] = t;
+  //日付を取得する
+  time_t  t = time(NULL);
+  struct tm *tm;
+  tm = localtime(&t);
+  uint8_t mon = tm->tm_mon + 1;
+  uint8_t day = tm->tm_mday;
+  uint8_t wd = tm->tm_wday;
+  uint8_t hour = tm->tm_hour;
 
-  // Now print the JSON into a char buffer
-  char buffer[128];
-  root.printTo(buffer, sizeof(buffer));
+  switch (jikiPtn) {
+    case JIKI_PTN1:
+    case JIKI_PTN2:
+    case JIKI_PTN3:
+    case JIKI_PTN4:
+      root["user"] = jikiPtn;
+      root["ispublic"] = true;
+      root["ts"] = t;
+
+      // Now print the JSON into a char buffer
+      root.printTo(buffer, sizeof(buffer));
+
+      // Now publish the char buffer to Beebotte
+      client.publish(topic_user, buffer, QoS);
+      break;
+
+    case JIKI_PTN5:
+      {
+        uint8_t plusDay = 0;
+        if (wd == 0) plusDay = 1;   //日曜日だった場合は月曜日の日付にする。
+        if (hour >= 20) plusDay = 1; //20時以降だった場合は翌日の日付にする。
+        if (wd == 6 && hour >= 20) plusDay = 2; //土曜日、かつ20時以降だった場合は月曜日の日付にする。
+        if (plusDay > 0) {
+          t += 86400 * plusDay;
+          tm = localtime(&t);
+          mon = tm->tm_mon + 1;
+          day = tm->tm_mday;
+        }
+
+        char date[4];
+        sprintf(date, "%02d%02d", mon, day);
+
+        root["food"] = date;
+        root["ispublic"] = true;
+        root["ts"] = t;
+
+        // Now print the JSON into a char buffer
+        root.printTo(buffer, sizeof(buffer));
+
+        // Now publish the char buffer to Beebotte
+        client.publish(topic_food, buffer, QoS);
+        break;
+      }
+    case JIKI_PTN6:
+      break;
+  }
+
+  //パターンごとに送信するトピックを変更する
+  switch (jikiPtn) {
+    //早起きボタン
+    case JIKI_PTN1:
+    case JIKI_PTN2:
+    case JIKI_PTN3:
+    case JIKI_PTN4:
+      break;
+
+    //給食
+    case JIKI_PTN5:
+      break;
+
+
+
+  }
 
   MsgPublishData = String(buffer);
   Serial.println(MsgPublishData);
-  
-  // Now publish the char buffer to Beebotte
-  //パターンごとに送信するトピックを変更する
-  client.publish(topic_user, buffer, QoS);
+
 }
 
 //date
@@ -252,11 +311,11 @@ void setup() {
 
 
 void loopDisplay() {
-  
+
   //IPアドレス
   IPAddress ip = WiFi.localIP();
   ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
-  
+
   //グラフデータの更新
   grline.addGraphData(0, jiki[JIKI_SIZE - 1]);
   grline.setAvg(0, jikiAvg);
@@ -287,7 +346,7 @@ void loopJikiSensor() {
     jiki[i] = jiki[i + 1];
     jikiAvg += jiki[i + 1];
   }
-  
+
   jiki[JIKI_SIZE - 1] = _v;
   jikiAvg += jiki[JIKI_SIZE - 1];
   jikiAvg /= JIKI_SIZE;
