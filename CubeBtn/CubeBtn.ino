@@ -61,13 +61,13 @@ unsigned long waitingTime;
 #define JIKI_NONE 9
 
 //閾値
-int jikiPtnDef[2] = {2700, 2750};
-int jikiPtn1[2] = {1650, 1750};
-int jikiPtn2[2] = {2150, 2250};
-int jikiPtn3[2] = {2550, 2650};
-int jikiPtn4[2] = {2800, 2900};
-int jikiPtn5[2] = {3300, 3550};
-int jikiPtn6[2] = {3800, 4098};
+int jikiPtnDef[2] = {2650, 2750};
+int jikiPtn1[2] = {1550, 1900};
+int jikiPtn2[2] = {2100, 2300};
+int jikiPtn3[2] = {2500, 2650};
+int jikiPtn4[2] = {2750, 2900};
+int jikiPtn5[2] = {2950, 3650};
+int jikiPtn6[2] = {3700, 4098};
 
 //保存するデータ数は1秒分
 #define JIKI_SIZE (1000000 / LOOPTIME_JIKI)
