@@ -93,17 +93,18 @@ void setup() {
   NefryDisplay.clear();
   NefryDisplay.display();
 
+  Nefry.setLed(0, 0, 0);
+  
   //サンプルデータ生成用乱数シード
   randomSeed(analogRead(0));
   
   //グラフの初期設定
   dispGraphLine_init();
-
 }
 
 
 void loop() {
-
+  
   //グラフ更新一時停止
   if (Nefry.readSW()) {
     isStopGraph = !isStopGraph;
@@ -114,7 +115,7 @@ void loop() {
     if (!isStopGraph) {
       
       //サンプルデータ
-      sampleData[0] = random(VALUE_LINE_MIN + 300, VALUE_LINE_MAX + 1 - 200);
+      sampleData[0] = random(VALUE_LINE_MIN + 1500, VALUE_LINE_MAX + 1 - 2000);
       sampleData[1] = (VALUE_LINE_MAX / 2) * (1 + sin(deg / (180 / PI)));
       sampleData[2] = (VALUE_LINE_MAX / 2) * (1 + cos(deg / (180 / PI)));
       deg += 10;
