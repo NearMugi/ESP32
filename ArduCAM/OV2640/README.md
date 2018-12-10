@@ -21,14 +21,14 @@ ESP32WebServer
 ## サンプルプログラム(ArduCAM_ESP32_Capture)の解析
 
 ### ピン配置をどうする？  
-CS  17  
+CS  17?  
 MOSI  
 MISO  
 SCLK  
 SDA  
 SCL  
 GND  
-5V  D10(5)  
+5V  D10(5)?  
 
 CAM_POWER_ON(=D10)はESP32のIO番号5(VSPI CS)  
 http://trac.switch-science.com/wiki/espr_one32  
