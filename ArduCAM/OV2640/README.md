@@ -1,19 +1,20 @@
-# OV2640‚ğ“®‚©‚·
+# OV2640ã‚’å‹•ã‹ã™
 http://www.arducam.com/arducam-mini-released/
 
 The OV2640 I2C slave address is 0x60 for write and 0x61 for read.
 
 https://github.com/ArduCAM/ArduCAM_ESP32S_UNO
 
-ƒ‰ƒCƒuƒ‰ƒŠ‚ğƒRƒs[‚·‚é
-C:\Users\(ƒ†[ƒU[)\AppData\Local\Arduino15\packages\ArduCAM_ESP32S_UNO\hardware\esp32\2.0.0\libraries\
+ãƒ©ã‚¤ãƒ–ãƒ©ãƒªã‚’ã‚³ãƒ”ãƒ¼ã™ã‚‹
+C:\Users\(ãƒ¦ãƒ¼ã‚¶ãƒ¼)\AppData\Local\Arduino15\packages\ArduCAM_ESP32S_UNO\hardware\esp32\2.0.0\libraries\
 ArduCAM
 ESP32WebServer
 
-(ƒhƒLƒ…ƒƒ“ƒg)\Arduino\libraries
+(ãƒ‰ã‚­ãƒ¥ãƒ¡ãƒ³ãƒˆ)\Arduino\libraries
 
 
-ŸƒTƒ“ƒvƒ‹ƒvƒƒOƒ‰ƒ€(ArduCAM_ESP32_Capture)‚Ì‰ğÍ
+â—†ã‚µãƒ³ãƒ—ãƒ«ãƒ—ãƒ­ã‚°ãƒ©ãƒ (ArduCAM_ESP32_Capture)ã®è§£æ
 
-CAM_POWER_ON(=D10)‚ÍESP32‚ÌIO”Ô†5(VSPI CS)
+CAM_POWER_ON(=D10)ã¯ESP32ã®IOç•ªå·5(VSPI CS)
 http://trac.switch-science.com/wiki/espr_one32
+![espr one 32 esp-wroom-32 arduino](https://user-images.githubusercontent.com/25577827/49706042-869b7980-fc66-11e8-8321-84c2bbef210c.PNG)
