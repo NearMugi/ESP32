@@ -21,14 +21,55 @@ ESP32WebServer
 ## サンプルプログラム(ArduCAM_ESP32_Capture)の解析
 
 ### ピン配置をどうする？  
-CS  17?  
-MOSI  
-MISO  
-SCLK  
-SDA  
-SCL  
-GND  
-5V  D10(5)?  
+VSPIとSDA,SCLを使えば良いと思う。  
+<table>
+    <tr>
+        <td>機能</td>
+        <td>サンプルプログラム</td>
+        <td>NefryBT</td>
+    </tr>
+    <tr>
+        <td>CS</td>
+        <td>17?</td>
+        <td>D5</td>
+    </tr>
+    <tr>
+        <td>MOSI</td>
+        <td>?</td>
+        <td>D2</td>
+    </tr>
+    <tr>
+        <td>MISO</td>
+        <td>?</td>
+        <td>D3</td>
+    </tr>
+    <tr>
+        <td>SCLK</td>
+        <td>?</td>
+        <td>D4</td>
+    </tr>
+    <tr>
+        <td>SDA</td>
+        <td>?</td>
+        <td>D1</td>
+    </tr>
+    <tr>
+        <td>SCL</td>
+        <td>?</td>
+        <td>D0</td>
+    </tr>
+    <tr>
+        <td>GND</td>
+        <td>GND</td>
+        <td>GND</td>
+    </tr>
+    <tr>
+        <td>5v</td>
+        <td>D10(5)?</td>
+        <td>5v</td>
+    </tr>
+  
+</table>
 
 #### CAM_POWER_ON(=D10)はESP32のIO番号5(VSPI CS)  
 http://trac.switch-science.com/wiki/espr_one32  
