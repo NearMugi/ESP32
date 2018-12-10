@@ -17,4 +17,9 @@ ESP32WebServer
 
 CAM_POWER_ON(=D10)はESP32のIO番号5(VSPI CS)  
 http://trac.switch-science.com/wiki/espr_one32  
-![espr one 32 esp-wroom-32 arduino](https://user-images.githubusercontent.com/25577827/49706042-869b7980-fc66-11e8-8321-84c2bbef210c.PNG)
+![espr one 32 esp-wroom-32 arduino](https://user-images.githubusercontent.com/25577827/49706042-869b7980-fc66-11e8-8321-84c2bbef210c.PNG)  
+
+ESP32のピン配置  
+![esp32_devkitc_pinout_01](https://user-images.githubusercontent.com/25577827/49706167-79cb5580-fc67-11e8-9c79-ac03d4d5cee4.png)  
+
+
