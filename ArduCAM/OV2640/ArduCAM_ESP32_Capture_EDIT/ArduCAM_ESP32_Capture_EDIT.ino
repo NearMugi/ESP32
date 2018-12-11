@@ -8,7 +8,7 @@
 // The demo sketch will do the following tasks:
 // 1. Set the camera to JPEG output mode.
 // 2. if server receives "GET /capture",it can take photo and send to the Web.
-// 3.if server receives "GET /stream",it can take photo continuously as video
+// 3. if server receives "GET /stream",it can take photo continuously as video
 //streaming and send to the Web.
 
 // This program requires the ArduCAM V4.0.0 (or later) library and ArduCAM ESP32 2MP/5MP camera
@@ -128,6 +128,7 @@ void serverStream() {
   response += "Content-Type: multipart/x-mixed-replace; boundary=frame\r\n\r\n";
   server.sendContent(response);
 
+  //LOOP
   while (1) {
     start_capture();
     while (!myCAM.get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));
@@ -203,24 +204,18 @@ void handleNotFound() {
   server.send(200, "text/plain", message);
   Serial.println(message);
 
-
-
   if (server.hasArg("ql")) {
     int ql = server.arg("ql").toInt();
-#if defined (OV2640_MINI_2MP) || defined (OV2640_CAM)
     myCAM.OV2640_set_JPEG_size(ql);
-#elif defined (OV5640_MINI_5MP_PLUS) || defined (OV5640_CAM)
-    myCAM.OV5640_set_JPEG_size(ql);
-#elif defined (OV5642_MINI_5MP_PLUS) || defined (OV5642_MINI_5MP_BIT_ROTATION_FIXED) ||(defined (OV5642_CAM))
-    myCAM.OV5642_set_JPEG_size(ql);
-#endif
 
     Serial.println("QL change to: " + server.arg("ql"));
   }
 }
+
+
 void setup() {
   Nefry.setProgramName("ArduCAM OV2640 Sample");
-  
+
   uint8_t vid, pid;
   uint8_t temp;
   //set the CS as an output:
@@ -231,8 +226,6 @@ void setup() {
   Wire.begin();
 
   Serial.println(F("ArduCAM Start!"));
-
-
 
   // initialize SPI:
   SPI.begin();
@@ -253,49 +246,21 @@ void setup() {
     Serial.println(F("SPI1 interface Error!"));
     while (1);
   }
-#if defined (OV2640_MINI_2MP) || defined (OV2640_CAM)
+
   //Check if the camera module type is OV2640
   myCAM.wrSensorReg8_8(0xff, 0x01);
   myCAM.rdSensorReg8_8(OV2640_CHIPID_HIGH, &vid);
   myCAM.rdSensorReg8_8(OV2640_CHIPID_LOW, &pid);
-  if ((vid != 0x26 ) && (( pid != 0x41 ) || ( pid != 0x42 )))
+  if ((vid != 0x26 ) && (( pid != 0x41 ) || ( pid != 0x42 ))) {
     Serial.println(F("Can't find OV2640 module!"));
-  else
+  }  else {
     Serial.println(F("OV2640 detected."));
-#elif defined (OV5640_MINI_5MP_PLUS) || defined (OV5640_CAM)
-  //Check if the camera module type is OV5640
-  myCAM.wrSensorReg16_8(0xff, 0x01);
-  myCAM.rdSensorReg16_8(OV5640_CHIPID_HIGH, &vid);
-  myCAM.rdSensorReg16_8(OV5640_CHIPID_LOW, &pid);
-  if ((vid != 0x56) || (pid != 0x40))
-    Serial.println(F("Can't find OV5640 module!"));
-  else
-    Serial.println(F("OV5640 detected."));
-#elif defined (OV5642_MINI_5MP_PLUS) || defined (OV5642_MINI_5MP) || defined (OV5642_MINI_5MP_BIT_ROTATION_FIXED) ||(defined (OV5642_CAM))
-  //Check if the camera module type is OV5642
-  myCAM.wrSensorReg16_8(0xff, 0x01);
-  myCAM.rdSensorReg16_8(OV5642_CHIPID_HIGH, &vid);
-  myCAM.rdSensorReg16_8(OV5642_CHIPID_LOW, &pid);
-  if ((vid != 0x56) || (pid != 0x42)) {
-    Serial.println(F("Can't find OV5642 module!"));
   }
-  else
-    Serial.println(F("OV5642 detected."));
-#endif
-
 
   //Change to JPEG capture mode and initialize the OV2640 module
   myCAM.set_format(JPEG);
   myCAM.InitCAM();
-#if defined (OV2640_MINI_2MP) || defined (OV2640_CAM)
   myCAM.OV2640_set_JPEG_size(OV2640_320x240);
-#elif defined (OV5640_MINI_5MP_PLUS) || defined (OV5640_CAM)
-  myCAM.write_reg(ARDUCHIP_TIM, VSYNC_LEVEL_MASK);   //VSYNC is active HIGH
-  myCAM.OV5640_set_JPEG_size(OV5640_320x240);
-#elif defined (OV5642_MINI_5MP_PLUS) || defined (OV5642_MINI_5MP) || defined (OV5642_MINI_5MP_BIT_ROTATION_FIXED) ||(defined (OV5642_CAM))
-  myCAM.write_reg(ARDUCHIP_TIM, VSYNC_LEVEL_MASK);   //VSYNC is active HIGH
-  myCAM.OV5640_set_JPEG_size(OV5642_320x240);
-#endif
 
   myCAM.clear_fifo_flag();
 
