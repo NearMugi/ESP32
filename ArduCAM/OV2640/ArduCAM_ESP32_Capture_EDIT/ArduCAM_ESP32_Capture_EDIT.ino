@@ -159,7 +159,7 @@ void serverStream() {
       {
         buffer[i++] = temp;  //save the last  0XD9
         //Write the remain bytes in the buffer
-        myCAM.CS_HIGH();;
+        myCAM.CS_HIGH();
         if (!client.connected()) break;
         client.write(&buffer[0], i);
         is_header = false;
@@ -215,6 +215,8 @@ void handleNotFound() {
 
 void setup() {
   Nefry.setProgramName("ArduCAM OV2640 Sample");
+
+  Nefry.enableSW();
 
   uint8_t vid, pid;
   uint8_t temp;
@@ -272,5 +274,8 @@ void setup() {
   Serial.println(F("Server started"));
 }
 void loop() {
+  if (Nefry.readSW()) {
+    serverCapture();
+  }
   server.handleClient();
 }
