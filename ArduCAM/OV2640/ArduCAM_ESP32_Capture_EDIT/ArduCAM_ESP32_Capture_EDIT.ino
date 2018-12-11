@@ -22,40 +22,9 @@
 #include <SPI.h>
 #include "memorysaver.h"
 
-#if !(defined ESP32 )
-#error Please select the ArduCAM ESP32 UNO board in the Tools/Board
-#endif
-//This demo can only work on OV2640_MINI_2MP or ARDUCAM_SHIELD_V2 platform.
-#if !(defined (OV2640_MINI_2MP)||defined (OV5640_MINI_5MP_PLUS) || defined (OV5642_MINI_5MP_PLUS) \
-    || defined (OV5642_MINI_5MP) || defined (OV5642_MINI_5MP_BIT_ROTATION_FIXED) \
-    ||(defined (ARDUCAM_SHIELD_V2) && (defined (OV2640_CAM) || defined (OV5640_CAM) || defined (OV5642_CAM))))
-#error Please select the hardware platform and camera module in the ../libraries/ArduCAM/memorysaver.h file
-#endif
-
-// set GPIO17 as the slave select :
 const int CS = D5;
-const int CAM_POWER_ON = D6
-#if defined (OV2640_MINI_2MP) || defined (OV2640_CAM)
+const int CAM_POWER_ON = D6;
 ArduCAM myCAM(OV2640, CS);
-#elif defined (OV5640_MINI_5MP_PLUS) || defined (OV5640_CAM)
-ArduCAM myCAM(OV5640, CS);
-#elif defined (OV5642_MINI_5MP_PLUS) || defined (OV5642_MINI_5MP) || defined (OV5642_MINI_5MP_BIT_ROTATION_FIXED) ||(defined (OV5642_CAM))
-ArduCAM myCAM(OV5642, CS);
-#endif
-
-//you can change the value of wifiType to select Station or AP mode.
-//Default is AP mode.
-int wifiType = 1; // 0:Station  1:AP
-
-//AP mode configuration
-//Default is arducam_esp8266.If you want,you can change the AP_aaid  to your favorite name
-const char *AP_ssid = "arducam_esp32";
-//Default is no password.If you want to set password,put your password here
-const char *AP_password = NULL;
-
-//Station mode you should put your ssid and password
-const char *ssid = "SSID"; // Put your SSID here
-const char *password = "PASSWORD"; // Put your PASSWORD here
 
 static const size_t bufferSize = 2048;
 static uint8_t buffer[bufferSize] = {0xFF};
@@ -250,18 +219,17 @@ void handleNotFound() {
   }
 }
 void setup() {
+  Nefry.setProgramName("ArduCAM OV2640 Sample");
+  
   uint8_t vid, pid;
   uint8_t temp;
   //set the CS as an output:
   pinMode(CS, OUTPUT);
   pinMode(CAM_POWER_ON , OUTPUT);
   digitalWrite(CAM_POWER_ON, HIGH);
-#if defined(__SAM3X8E__)
-  Wire1.begin();
-#else
+
   Wire.begin();
-#endif
-  Serial.begin(115200);
+
   Serial.println(F("ArduCAM Start!"));
 
 
@@ -330,43 +298,6 @@ void setup() {
 #endif
 
   myCAM.clear_fifo_flag();
-  if (wifiType == 0) {
-    if (!strcmp(ssid, "SSID")) {
-      Serial.println(F("Please set your SSID"));
-      while (1);
-    }
-    if (!strcmp(password, "PASSWORD")) {
-      Serial.println(F("Please set your PASSWORD"));
-      while (1);
-    }
-    // Connect to WiFi network
-    Serial.println();
-    Serial.println();
-    Serial.print(F("Connecting to "));
-    Serial.println(ssid);
-
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) {
-      delay(500);
-      Serial.print(F("."));
-    }
-    Serial.println(F("WiFi connected"));
-    Serial.println("");
-    Serial.println(WiFi.localIP());
-  } else if (wifiType == 1) {
-    Serial.println();
-    Serial.println();
-    Serial.print(F("Share AP: "));
-    Serial.println(AP_ssid);
-    Serial.print(F("The password is: "));
-    Serial.println(AP_password);
-
-    WiFi.mode(WIFI_AP);
-    WiFi.softAP(AP_ssid, AP_password);
-    Serial.println("");
-    Serial.println(WiFi.softAPIP());
-  }
 
   // Start the server
   server.on("/capture", HTTP_GET, serverCapture);
