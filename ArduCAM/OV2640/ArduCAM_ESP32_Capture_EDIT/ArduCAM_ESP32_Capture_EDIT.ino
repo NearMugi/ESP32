@@ -13,11 +13,11 @@
 
 // This program requires the ArduCAM V4.0.0 (or later) library and ArduCAM ESP32 2MP/5MP camera
 // and use Arduino IDE 1.8.1 compiler or above
+#include <Nefry.h>
+#include <NefryDisplay.h>
 
-#include <WiFi.h>
 #include <Wire.h>
 
-#include "ESP32WebServer.h"
 #include "ArduCAM.h"
 #include <SPI.h>
 #include "memorysaver.h"
@@ -33,8 +33,8 @@
 #endif
 
 // set GPIO17 as the slave select :
-const int CS = D1; //17;
-const int CAM_POWER_ON = D0; //D10;
+const int CS = D5;
+const int CAM_POWER_ON = D6
 #if defined (OV2640_MINI_2MP) || defined (OV2640_CAM)
 ArduCAM myCAM(OV2640, CS);
 #elif defined (OV5640_MINI_5MP_PLUS) || defined (OV5640_CAM)
