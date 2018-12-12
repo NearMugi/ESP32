@@ -121,77 +121,6 @@ void serverCapture() {
   Serial.println(F("CAM send Done."));
 }
 
-void serverStream() {
-  WiFiClient client = server.client();
-
-  String response = "HTTP/1.1 200 OK\r\n";
-  response += "Content-Type: multipart/x-mixed-replace; boundary=frame\r\n\r\n";
-  server.sendContent(response);
-
-  //LOOP
-  while (1) {
-    start_capture();
-    while (!myCAM.get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));
-    size_t len = myCAM.read_fifo_length();
-    if (len >= MAX_FIFO_SIZE) //8M
-    {
-      Serial.println(F("Over size."));
-      continue;
-    }
-    if (len == 0 ) //0 kb
-    {
-      Serial.println(F("Size is 0."));
-      continue;
-    }
-    myCAM.CS_LOW();
-    myCAM.set_fifo_burst();
-    if (!client.connected()) break;
-    response = "--frame\r\n";
-    response += "Content-Type: image/jpeg\r\n\r\n";
-    server.sendContent(response);
-    while ( len-- )
-    {
-      temp_last = temp;
-      temp =  SPI.transfer(0x00);
-
-      //Read JPEG data from FIFO
-      if ( (temp == 0xD9) && (temp_last == 0xFF) ) //If find the end ,break while,
-      {
-        buffer[i++] = temp;  //save the last  0XD9
-        //Write the remain bytes in the buffer
-        myCAM.CS_HIGH();
-        if (!client.connected()) break;
-        client.write(&buffer[0], i);
-        is_header = false;
-        i = 0;
-      }
-      if (is_header == true)
-      {
-        //Write image data to buffer if not full
-        if (i < bufferSize)
-          buffer[i++] = temp;
-        else
-        {
-          //Write bufferSize bytes image data to file
-          myCAM.CS_HIGH();
-          if (!client.connected()) break;
-          client.write(&buffer[0], bufferSize);
-          i = 0;
-          buffer[i++] = temp;
-          myCAM.CS_LOW();
-          myCAM.set_fifo_burst();
-        }
-      }
-      else if ((temp == 0xD8) & (temp_last == 0xFF))
-      {
-        is_header = true;
-        buffer[i++] = temp_last;
-        buffer[i++] = temp;
-      }
-    }
-    if (!client.connected()) break;
-  }
-}
 void handleNotFound() {
   String message = "Server is running!\n\n";
   message += "URI: ";
@@ -268,7 +197,6 @@ void setup() {
 
   // Start the server
   server.on("/capture", HTTP_GET, serverCapture);
-  server.on("/stream", HTTP_GET, serverStream);
   server.onNotFound(handleNotFound);
   server.begin();
   Serial.println(F("Server started"));
