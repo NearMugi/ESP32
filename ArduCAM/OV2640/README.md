@@ -81,3 +81,6 @@ http://trac.switch-science.com/wiki/espr_one32
 ![153ddd38df8d84c15b1f0cefb13eb5e4-768x425](https://user-images.githubusercontent.com/25577827/49710207-6cb86180-fc7b-11e8-8e6a-e0398bdf4f1a.png)  
 <img width="384" alt="a8e4eea9c7118306a960a601ebcc4778-768x660" src="https://user-images.githubusercontent.com/25577827/49710209-6e822500-fc7b-11e8-84a7-914ad6560271.png">  
 
+## データの流れ  
+NefryBTからjpegデータをどこかにPOSTする。  
+ラズパイ3？
