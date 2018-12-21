@@ -1,18 +1,3 @@
-// ArduCAM Mini demo (C)2017 Lee
-// Web: http://www.ArduCAM.com
-// This program is a demo of how to use most of the functions
-// of the library with ArduCAM ESP32 2MP/5MP camera.
-// This demo was made for ArduCAM ESP32 2MP/5MP Camera.
-// It can take photo and send to the Web.
-// It can take photo continuously as video streaming and send to the Web.
-// The demo sketch will do the following tasks:
-// 1. Set the camera to JPEG output mode.
-// 2. if server receives "GET /capture",it can take photo and send to the Web.
-// 3. if server receives "GET /stream",it can take photo continuously as video
-//streaming and send to the Web.
-
-// This program requires the ArduCAM V4.0.0 (or later) library and ArduCAM ESP32 2MP/5MP camera
-// and use Arduino IDE 1.8.1 compiler or above
 #include <Nefry.h>
 #include <NefryDisplay.h>
 
@@ -26,21 +11,29 @@ const int CS = D5;
 const int CAM_POWER_ON = D6;
 ArduCAM myCAM(OV2640, CS);
 
+const char* host = "localhost:5500"; //ここにサーバーホストを指定
+const char* page = "/";
+
 static const size_t bufferSize = 2048;
 static uint8_t buffer[bufferSize] = {0xFF};
 uint8_t temp = 0, temp_last = 0;
 int i = 0;
 bool is_header = false;
 
-ESP32WebServer server(80);
+void Capture() {
+  delay(1000);
 
-void start_capture() {
   myCAM.clear_fifo_flag();
   myCAM.start_capture();
+
+  while (!myCAM.get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));
+
+  SendCapture();
 }
 
-void camCapture(ArduCAM myCAM) {
-  WiFiClient client = server.client();
+void SendCapture() {
+  WiFiClient client;
+  
   uint32_t len  = myCAM.read_fifo_length();
   if (len >= MAX_FIFO_SIZE) //8M
   {
@@ -52,11 +45,21 @@ void camCapture(ArduCAM myCAM) {
   }
   myCAM.CS_LOW();
   myCAM.set_fifo_burst();
-  if (!client.connected()) return;
-  String response = "HTTP/1.1 200 OK\r\n";
-  response += "Content-Type: image/jpeg\r\n";
-  response += "Content-len: " + String(len) + "\r\n\r\n";
-  server.sendContent(response);
+
+  if (!client.connect(host, 80)) {
+    client.stop();
+    return;
+  }
+
+  client.print(String("POST ") + page + F(" HTTP/1.1\n") +
+               F("Host: ") + host + F("\n") +
+               F("Content-Type: image/jpeg\n") +
+               F("Content-Length: ") + String(len) + F("\n") +
+               F("Connection: close\n\n"));
+  Serial.println(F("Content-Length: ")); Nefry.println(len);
+  Serial.println(F("HTTP Sending..... "));
+
+
   i = 0;
   while ( len-- )
   {
@@ -69,6 +72,7 @@ void camCapture(ArduCAM myCAM) {
       //Write the remain bytes in the buffer
       if (!client.connected()) break;
       client.write(&buffer[0], i);
+      client.flush();
       is_header = false;
       i = 0;
       myCAM.CS_HIGH();
@@ -84,6 +88,7 @@ void camCapture(ArduCAM myCAM) {
         //Write bufferSize bytes image data to file
         if (!client.connected()) break;
         client.write(&buffer[0], bufferSize);
+        client.flush();
         i = 0;
         buffer[i++] = temp;
       }
@@ -95,51 +100,18 @@ void camCapture(ArduCAM myCAM) {
       buffer[i++] = temp;
     }
   }
-}
 
-void serverCapture() {
   delay(1000);
-  start_capture();
-  Serial.println(F("CAM Capturing"));
-
-  int total_time = 0;
-
-  total_time = millis();
-  while (!myCAM.get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));
-  total_time = millis() - total_time;
-  Serial.print(F("capture total_time used (in miliseconds):"));
-  Serial.println(total_time, DEC);
-
-  total_time = 0;
-
-  Serial.println(F("CAM Capture Done."));
-  total_time = millis();
-  camCapture(myCAM);
-  total_time = millis() - total_time;
-  Serial.print(F("send total_time used (in miliseconds):"));
-  Serial.println(total_time, DEC);
-  Serial.println(F("CAM send Done."));
-}
-
-void handleNotFound() {
-  String message = "Server is running!\n\n";
-  message += "URI: ";
-  message += server.uri();
-  message += "\nMethod: ";
-  message += (server.method() == HTTP_GET) ? "GET" : "POST";
-  message += "\nArguments: ";
-  message += server.args();
-  message += "\n";
-  server.send(200, "text/plain", message);
-  Serial.println(message);
-
-  if (server.hasArg("ql")) {
-    int ql = server.arg("ql").toInt();
-    myCAM.OV2640_set_JPEG_size(ql);
-
-    Serial.println("QL change to: " + server.arg("ql"));
+  if (client.available()) {
+    String line = client.readStringUntil('\r');
+    Serial.println(F("Responce: ")); Nefry.println(line);
   }
+  client.stop();
+
+  Serial.println("Picture sent.");
+
 }
+
 
 
 void setup() {
@@ -195,15 +167,9 @@ void setup() {
 
   myCAM.clear_fifo_flag();
 
-  // Start the server
-  server.on("/capture", HTTP_GET, serverCapture);
-  server.onNotFound(handleNotFound);
-  server.begin();
-  Serial.println(F("Server started"));
 }
 void loop() {
   if (Nefry.readSW()) {
-    serverCapture();
+    Capture();
   }
-  server.handleClient();
 }
