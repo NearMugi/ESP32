@@ -11,7 +11,7 @@ const int CS = D5;
 const int CAM_POWER_ON = D6;
 ArduCAM myCAM(OV2640, CS);
 
-const char* host = "localhost:5500"; //ここにサーバーホストを指定
+const char* host = "192.168.0.8"; //ここにサーバーホストを指定
 const char* page = "/";
 
 static const size_t bufferSize = 2048;
@@ -25,13 +25,13 @@ void Capture() {
 
   myCAM.clear_fifo_flag();
   myCAM.start_capture();
-
   while (!myCAM.get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));
 
   SendCapture();
 }
 
 void SendCapture() {
+  Serial.println(F("SendCapture"));
   WiFiClient client;
   
   uint32_t len  = myCAM.read_fifo_length();
@@ -46,10 +46,15 @@ void SendCapture() {
   myCAM.CS_LOW();
   myCAM.set_fifo_burst();
 
+reconnect:
+  Serial.println(F("Try to connect.."));
   if (!client.connect(host, 80)) {
     client.stop();
-    return;
+    delay(1000);
+    goto reconnect;
   }
+
+  Serial.println(F("CONNECT Client"));
 
   client.print(String("POST ") + page + F(" HTTP/1.1\n") +
                F("Host: ") + host + F("\n") +
