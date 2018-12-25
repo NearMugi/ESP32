@@ -49,21 +49,38 @@ void SendCapture() {
 
   WiFiClient client;
 reconnect:
-  Serial.println("Try to connect..");
+  Serial.println(F("Try to connect.."));
   if (!client.connect(HOST, 80)) {
     client.stop();
     delay(1000);
     goto reconnect;
   }
+  Serial.print(F("connect host:"));
+  Serial.println(HOST);
 
-  client.print(String("POST ") + URL + F(" HTTP/1.1\n") +
-               F("Host: ") + HOST + F("\n") +
-               F("Content-Type: image/jpeg\n") +
-               F("Content-Length: ") + String(len) + F("\n") +
-               F("Authorization: Bearer ") + auth + F("\n") +
-               F("Connection: close\n\n"));
-  Serial.print(F("Content-Length: ")); Nefry.println(len);
-  Serial.print(F("HTTP Sending..... "));
+  Serial.print(F("Content-Length: "));
+  Serial.println(len);
+
+  String request = F("POST ");
+  request += URL;
+  request += F(" HTTP/1.1\n");
+//  request += F("Host: ");
+//  request += HOST;
+//  request += F("\n");
+  request += F("Content-Type: image/jpeg\n");
+  request += F("Content-Length: ");
+  request += String(len);
+  request += F("\n");
+  request += F("Authorization: Bearer ");
+  request += auth;
+  request += F("\n");
+//  request += F("Connection: close\n\n");
+  request += F("\n");
+  
+  Serial.println(request);
+
+  client.print(request);
+  Serial.println(F("HTTP Sending..... "));
 
 
   i = 0;
@@ -78,7 +95,7 @@ reconnect:
       //Write the remain bytes in the buffer
       if (!client.connected()) break;
       client.write(&buffer[0], i);
-      client.flush();
+      Serial.println(F("Write the remain bytes in the buffer"));
       is_header = false;
       i = 0;
       myCAM.CS_HIGH();
@@ -94,7 +111,7 @@ reconnect:
         //Write bufferSize bytes image data to file
         if (!client.connected()) break;
         client.write(&buffer[0], bufferSize);
-        client.flush();
+        Serial.println(F("Write bufferSize bytes image data to file"));
         i = 0;
         buffer[i++] = temp;
       }
@@ -108,9 +125,10 @@ reconnect:
   }
 
   delay(1000);
+
   if (client.available()) {
     String line = client.readStringUntil('\r');
-    Serial.print(F("Responce: ")); Nefry.println(line);
+    Serial.print(F("Responce: ")); Serial.println(line);
   }
   client.stop();
   Serial.println("Picture sent");
