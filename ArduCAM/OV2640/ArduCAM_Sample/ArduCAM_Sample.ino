@@ -1,6 +1,5 @@
 #include <Nefry.h>
 #include <NefryDisplay.h>
-
 #include <Wire.h>
 
 #include "ArduCAM.h"
@@ -11,8 +10,10 @@ const int CS = D5;
 const int CAM_POWER_ON = D6;
 ArduCAM myCAM(OV2640, CS);
 
-const char* host = "192.168.0.8"; //ここにサーバーホストを指定
-const char* page = "/";
+#define NEFRY_DATASTORE_DRIVE_TOKEN 4
+const char* URL = "https://www.googleapis.com/upload/drive/v3/files?uploadType=media";
+const char* HOST = "www.googleapis.com";
+String auth = "";
 
 static const size_t bufferSize = 2048;
 static uint8_t buffer[bufferSize] = {0xFF};
@@ -32,12 +33,12 @@ void Capture() {
 
 void SendCapture() {
   Serial.println(F("SendCapture"));
-  WiFiClient client;
-  
+
   uint32_t len  = myCAM.read_fifo_length();
-  if (len >= MAX_FIFO_SIZE) //8M
+  if (len >= MAX_FIFO_SIZE) //0x5FFFF      //384KByte
   {
     Serial.println(F("Over size."));
+    len = MAX_FIFO_SIZE;
   }
   if (len == 0 ) //0 kb
   {
@@ -46,23 +47,23 @@ void SendCapture() {
   myCAM.CS_LOW();
   myCAM.set_fifo_burst();
 
+  WiFiClient client;
 reconnect:
-  Serial.println(F("Try to connect.."));
-  if (!client.connect(host, 80)) {
+  Serial.println("Try to connect..");
+  if (!client.connect(HOST, 80)) {
     client.stop();
     delay(1000);
     goto reconnect;
   }
 
-  Serial.println(F("CONNECT Client"));
-
-  client.print(String("POST ") + page + F(" HTTP/1.1\n") +
-               F("Host: ") + host + F("\n") +
+  client.print(String("POST ") + URL + F(" HTTP/1.1\n") +
+               F("Host: ") + HOST + F("\n") +
                F("Content-Type: image/jpeg\n") +
                F("Content-Length: ") + String(len) + F("\n") +
+               F("Authorization: Bearer ") + auth + F("\n") +
                F("Connection: close\n\n"));
-  Serial.println(F("Content-Length: ")); Nefry.println(len);
-  Serial.println(F("HTTP Sending..... "));
+  Serial.print(F("Content-Length: ")); Nefry.println(len);
+  Serial.print(F("HTTP Sending..... "));
 
 
   i = 0;
@@ -109,11 +110,10 @@ reconnect:
   delay(1000);
   if (client.available()) {
     String line = client.readStringUntil('\r');
-    Serial.println(F("Responce: ")); Nefry.println(line);
+    Serial.print(F("Responce: ")); Nefry.println(line);
   }
   client.stop();
-
-  Serial.println("Picture sent.");
+  Serial.println("Picture sent");
 
 }
 
@@ -123,6 +123,9 @@ void setup() {
   Nefry.setProgramName("ArduCAM OV2640 Sample");
 
   Nefry.enableSW();
+
+  Nefry.setStoreTitleStr("Drive Token", NEFRY_DATASTORE_DRIVE_TOKEN);
+  auth = Nefry.getStoreStr(NEFRY_DATASTORE_DRIVE_TOKEN);
 
   uint8_t vid, pid;
   uint8_t temp;
