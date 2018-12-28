@@ -61,69 +61,16 @@ reconnect:
   Serial.print(F("Content-Length: "));
   Serial.println(len);
 
-  String request = F("POST ");
-  request += URL;
-  request += F(" HTTP/1.1\n");
-//  request += F("Host: ");
-//  request += HOST;
-//  request += F("\n");
-  request += F("Content-Type: image/jpeg\n");
-  request += F("Content-Length: ");
-  request += String(len);
-  request += F("\n");
-  request += F("Authorization: Bearer ");
-  request += auth;
-  request += F("\n");
-//  request += F("Connection: close\n\n");
-  request += F("\n");
-  
-  Serial.println(request);
+  client.print(String("POST ") + URL + F(" HTTP/1.1\n") +
+               F("Host: ") + HOST + F("\n") +
+               F("Content-Type: text/plain\n") +
+               F("Content-Length: ") + "4" + F("\n") +
+               F("Authorization: Bearer ") + auth + F("\n") +
+               F("Connection: close\n\n"));
 
-  client.print(request);
   Serial.println(F("HTTP Sending..... "));
 
-
-  i = 0;
-  while ( len-- )
-  {
-    temp_last = temp;
-    temp =  SPI.transfer(0x00);
-    //Read JPEG data from FIFO
-    if ( (temp == 0xD9) && (temp_last == 0xFF) ) //If find the end ,break while,
-    {
-      buffer[i++] = temp;  //save the last  0XD9
-      //Write the remain bytes in the buffer
-      if (!client.connected()) break;
-      client.write(&buffer[0], i);
-      Serial.println(F("Write the remain bytes in the buffer"));
-      is_header = false;
-      i = 0;
-      myCAM.CS_HIGH();
-      break;
-    }
-    if (is_header == true)
-    {
-      //Write image data to buffer if not full
-      if (i < bufferSize)
-        buffer[i++] = temp;
-      else
-      {
-        //Write bufferSize bytes image data to file
-        if (!client.connected()) break;
-        client.write(&buffer[0], bufferSize);
-        Serial.println(F("Write bufferSize bytes image data to file"));
-        i = 0;
-        buffer[i++] = temp;
-      }
-    }
-    else if ((temp == 0xD8) & (temp_last == 0xFF))
-    {
-      is_header = true;
-      buffer[i++] = temp_last;
-      buffer[i++] = temp;
-    }
-  }
-
+  client.write("HOGE");
   delay(1000);
 
   if (client.available()) {
@@ -131,8 +78,8 @@ reconnect:
     Serial.print(F("Responce: ")); Serial.println(line);
   }
   client.stop();
-  Serial.println("Picture sent");
 
+  Serial.println("Picture sent");
 }
 
 
