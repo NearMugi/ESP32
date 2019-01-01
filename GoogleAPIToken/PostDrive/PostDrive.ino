@@ -6,11 +6,13 @@ googleAPI api;
 #define NEFRY_DATASTORE_REFRESH_TOKEN 5
 #define NEFRY_DATASTORE_CLIENT_ID 6
 #define NEFRY_DATASTORE_CLIENT_SECRET 7
+#define NEFRY_DATASTORE_PARENT 8
 
 String refresh_token = "";
 String client_id = "";
 String client_secret = "";
 String accessToken = "";
+String parentID = "";
 
 const char* host = "www.googleapis.com";
 String token_uri = "/upload/drive/v3/files?uploadType=multipart";
@@ -23,14 +25,16 @@ void postDrive() {
   uint8_t DataSize = sizeof(postData) - 1;
 
   String fileName = "myObject";
+  String comment = "From NefryBT";
   
-  Serial.println(DataSize);
   String start_request = "";
   start_request = start_request +
                   "\r\n--foo_bar_baz\r\n" +
                   "Content-Type: application/json; charset=UTF-8\r\n" +
                   "\r\n{\r\n" +
-                  "\t\"name\": \"" + fileName + "\"\r\n" +
+                  "\t\"name\": \"" + fileName + "\",\r\n" +
+                  "\t\"parents\": [\"" + parentID + "\"],\r\n" +
+                  "\t\"description\": \"" + comment + "\"\r\n" +
                   "}\r\n\r\n" +
                   "--foo_bar_baz\r\n" +
                   "Content-Type: text/plain\r\n\r\n";
@@ -102,11 +106,13 @@ void setup() {
   Nefry.setStoreTitleStr("Refresh Token", NEFRY_DATASTORE_REFRESH_TOKEN);
   Nefry.setStoreTitleStr("Client ID", NEFRY_DATASTORE_CLIENT_ID);
   Nefry.setStoreTitleStr("Client Secret", NEFRY_DATASTORE_CLIENT_SECRET);
+  Nefry.setStoreTitleStr("ParentFolder ID", NEFRY_DATASTORE_PARENT);
 
   refresh_token = Nefry.getStoreStr(NEFRY_DATASTORE_REFRESH_TOKEN);
   client_id = Nefry.getStoreStr(NEFRY_DATASTORE_CLIENT_ID);
   client_secret = Nefry.getStoreStr(NEFRY_DATASTORE_CLIENT_SECRET);
-
+  parentID = Nefry.getStoreStr(NEFRY_DATASTORE_PARENT);
+  
   delay(5000);
 
   accessToken = api.GetAccessToken(refresh_token, client_id, client_secret);
