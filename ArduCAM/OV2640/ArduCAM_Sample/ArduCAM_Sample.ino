@@ -2,6 +2,16 @@
 #include <NefryDisplay.h>
 #include <Wire.h>
 
+#include "googleAPI.h"
+googleAPI api;
+#define NEFRY_DATASTORE_REFRESH_TOKEN 5
+#define NEFRY_DATASTORE_CLIENT_ID 6
+#define NEFRY_DATASTORE_CLIENT_SECRET 7
+String refresh_token = "";
+String client_id = "";
+String client_secret = "";
+String accessToken = "";
+
 #include "ArduCAM.h"
 #include <SPI.h>
 #include "memorysaver.h"
@@ -10,10 +20,8 @@ const int CS = D5;
 const int CAM_POWER_ON = D6;
 ArduCAM myCAM(OV2640, CS);
 
-#define NEFRY_DATASTORE_DRIVE_TOKEN 4
-const char* URL = "https://www.googleapis.com/upload/drive/v3/files?uploadType=media";
+const char* URL = "/upload/drive/v3/files?uploadType=media";
 const char* HOST = "www.googleapis.com";
-String auth = "";
 
 static const size_t bufferSize = 2048;
 static uint8_t buffer[bufferSize] = {0xFF};
@@ -24,9 +32,9 @@ bool is_header = false;
 void Capture() {
   delay(1000);
 
-  myCAM.clear_fifo_flag();
-  myCAM.start_capture();
-  while (!myCAM.get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));
+//  myCAM.clear_fifo_flag();
+//  myCAM.start_capture();
+//  while (!myCAM.get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));
 
   SendCapture();
 }
@@ -55,6 +63,7 @@ reconnect:
     delay(1000);
     goto reconnect;
   }
+  
   Serial.print(F("connect host:"));
   Serial.println(HOST);
 
@@ -65,12 +74,12 @@ reconnect:
                F("Host: ") + HOST + F("\n") +
                F("Content-Type: text/plain\n") +
                F("Content-Length: ") + "4" + F("\n") +
-               F("Authorization: Bearer ") + auth + F("\n") +
+               F("Authorization: Bearer ") + accessToken + F("\n") +
                F("Connection: close\n\n"));
 
   Serial.println(F("HTTP Sending..... "));
 
-  client.write("HOGE");
+  client.write("HOGE",4);
   delay(1000);
 
   if (client.available()) {
@@ -89,9 +98,15 @@ void setup() {
 
   Nefry.enableSW();
 
-  Nefry.setStoreTitleStr("Drive Token", NEFRY_DATASTORE_DRIVE_TOKEN);
-  auth = Nefry.getStoreStr(NEFRY_DATASTORE_DRIVE_TOKEN);
+  Nefry.setStoreTitleStr("Refresh Token", NEFRY_DATASTORE_REFRESH_TOKEN);
+  Nefry.setStoreTitleStr("Client ID", NEFRY_DATASTORE_CLIENT_ID);
+  Nefry.setStoreTitleStr("Client Secret", NEFRY_DATASTORE_CLIENT_SECRET);
 
+  refresh_token = Nefry.getStoreStr(NEFRY_DATASTORE_REFRESH_TOKEN);
+  client_id = Nefry.getStoreStr(NEFRY_DATASTORE_CLIENT_ID);
+  client_secret = Nefry.getStoreStr(NEFRY_DATASTORE_CLIENT_SECRET);
+
+#if false
   uint8_t vid, pid;
   uint8_t temp;
   //set the CS as an output:
@@ -139,10 +154,11 @@ void setup() {
   myCAM.OV2640_set_JPEG_size(OV2640_320x240);
 
   myCAM.clear_fifo_flag();
-
+#endif
 }
 void loop() {
   if (Nefry.readSW()) {
+    accessToken = api.GetAccessToken(refresh_token, client_id, client_secret);
     Capture();
   }
 }
