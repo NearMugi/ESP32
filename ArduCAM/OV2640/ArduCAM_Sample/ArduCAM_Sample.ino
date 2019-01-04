@@ -20,8 +20,6 @@ const int CS = D5;
 const int CAM_POWER_ON = D6;
 ArduCAM myCAM(OV2640, CS);
 
-const char* URL = "/upload/drive/v3/files?uploadType=media";
-const char* HOST = "www.googleapis.com";
 
 static const size_t bufferSize = 2048;
 static uint8_t buffer[bufferSize] = {0xFF};
@@ -32,9 +30,9 @@ bool is_header = false;
 void Capture() {
   delay(1000);
 
-//  myCAM.clear_fifo_flag();
-//  myCAM.start_capture();
-//  while (!myCAM.get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));
+  myCAM.clear_fifo_flag();
+  myCAM.start_capture();
+  while (!myCAM.get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));
 
   SendCapture();
 }
@@ -98,15 +96,6 @@ void setup() {
 
   Nefry.enableSW();
 
-  Nefry.setStoreTitleStr("Refresh Token", NEFRY_DATASTORE_REFRESH_TOKEN);
-  Nefry.setStoreTitleStr("Client ID", NEFRY_DATASTORE_CLIENT_ID);
-  Nefry.setStoreTitleStr("Client Secret", NEFRY_DATASTORE_CLIENT_SECRET);
-
-  refresh_token = Nefry.getStoreStr(NEFRY_DATASTORE_REFRESH_TOKEN);
-  client_id = Nefry.getStoreStr(NEFRY_DATASTORE_CLIENT_ID);
-  client_secret = Nefry.getStoreStr(NEFRY_DATASTORE_CLIENT_SECRET);
-
-#if false
   uint8_t vid, pid;
   uint8_t temp;
   //set the CS as an output:
@@ -154,11 +143,9 @@ void setup() {
   myCAM.OV2640_set_JPEG_size(OV2640_320x240);
 
   myCAM.clear_fifo_flag();
-#endif
 }
 void loop() {
   if (Nefry.readSW()) {
-    accessToken = api.GetAccessToken(refresh_token, client_id, client_secret);
     Capture();
   }
 }

@@ -24,10 +24,53 @@ class googleAPI {
 
     //request
     String postHeader_base = "";  //リクエストごとにサイズを差し替える
-    String start_request_base = "";  //リクエストごとにファイル名・親フォルダID・コメントを差し替える
+    String start_request_text_base = "";  //リクエストごとにファイル名・親フォルダID・コメントを差し替える
+    String start_request_jpeg_base = "";  //リクエストごとにファイル名・親フォルダID・コメントを差し替える
     String end_request = "\r\n--foo_bar_baz--\r\n"; //どのリクエストでも共通
 
   public:
+    String getPostHeader(uint16_t len) {
+      if (accessToken.length() > 0) {
+        String tmp = postHeader_base;
+        tmp.replace("@full_length", String(len));
+        return tmp;
+      } else {
+        return "";
+      }
+    }
+
+    String getStartRequest_Text(String _fileName, String _comment) {
+      if (accessToken.length() > 0) {
+        String tmp = start_request_text_base;
+        tmp.replace("@fileName", _fileName);
+        tmp.replace("@comment", _comment);
+        return tmp;
+      } else {
+        return "";
+      }
+    }
+
+    String getStartRequest_Jpeg(String _fileName, String _comment) {
+      if (accessToken.length() > 0) {
+        String tmp = start_request_jpeg_base;
+        tmp.replace("@fileName", _fileName);
+        tmp.replace("@comment", _comment);
+        return tmp;
+      } else {
+        return "";
+      }
+    }
+
+    String getEndRequest() {
+      if (accessToken.length() > 0) {
+        return end_request;
+      } else {
+        return "";
+      }
+    }
+
+
+
     bool InitAPI() {
       Nefry.setStoreTitleStr("Refresh Token", NEFRY_DATASTORE_REFRESH_TOKEN);
       Nefry.setStoreTitleStr("Client ID", NEFRY_DATASTORE_CLIENT_ID);
@@ -42,6 +85,7 @@ class googleAPI {
 
       delay(5000);
 
+      //アクセストークンを取得
       accessToken = GetAccessToken(refresh_token, client_id, client_secret);
       if (accessToken.length() > 0) {
         Serial.println(F("Get New AccessToken"));
@@ -61,17 +105,21 @@ class googleAPI {
                         ("Authorization: Bearer " + accessToken + "\r\n") +
                         ("\r\n");
 
-      start_request_base = "";
-      start_request_base = start_request_base +
-                           "\r\n--foo_bar_baz\r\n" +
-                           "Content-Type: application/json; charset=UTF-8\r\n" +
-                           "\r\n{\r\n" +
-                           "\t\"name\": \"@fileName\",\r\n" +
-                           "\t\"parents\": [\"@parentID\"],\r\n" +
-                           "\t\"description\": \"@comment\"\r\n" +
-                           "}\r\n\r\n" +
-                           "--foo_bar_baz\r\n" +
-                           "Content-Type: text/plain\r\n\r\n";
+      start_request_text_base = "";
+      start_request_jpeg_base = "";
+      String tmp = "";
+
+      tmp = tmp +
+            "\r\n--foo_bar_baz\r\n" +
+            "Content-Type: application/json; charset=UTF-8\r\n" +
+            "\r\n{\r\n" +
+            "\t\"name\": \"@fileName\",\r\n" +
+            "\t\"parents\": [\"" + parentID + "\"],\r\n" +
+            "\t\"description\": \"@comment\"\r\n" +
+            "}\r\n\r\n" +
+            "--foo_bar_baz\r\n";
+      start_request_text_base = tmp + "Content-Type: text/plain\r\n\r\n";
+      start_request_jpeg_base = tmp + "Content-Type: image/jpeg\r\n\r\n";
     }
 
 
@@ -118,16 +166,11 @@ class googleAPI {
         postData[i] = (uint8_t)_textData[i];
       }
 
-      String start_request = start_request_base;
-      start_request.replace("@fileName", _fileName);
-      start_request.replace("@parentID", parentID);
-      start_request.replace("@comment", _comment);
+      String start_request = getStartRequest_Text(_fileName, _comment);
 
       uint16_t full_length;
       full_length = start_request.length() + DataSize + end_request.length();
-
-      String postHeader = postHeader_base;
-      postHeader.replace("@full_length", String(full_length));
+      String postHeader = getPostHeader(full_length);
 
       String result = "";
 
