@@ -1,6 +1,7 @@
 #include <Nefry.h>
 #include <NefryDisplay.h>
 #include <Wire.h>
+#include <WiFiClientSecure.h>
 
 #include "googleAPI.h"
 googleAPI api;
@@ -20,73 +21,90 @@ const int CS = D5;
 const int CAM_POWER_ON = D6;
 ArduCAM myCAM(OV2640, CS);
 
-
-static const size_t bufferSize = 2048;
-static uint8_t buffer[bufferSize] = {0xFF};
-uint8_t temp = 0, temp_last = 0;
-int i = 0;
-bool is_header = false;
-
 void Capture() {
-  delay(1000);
+  Serial.println(F("SendCapture"));
 
   myCAM.clear_fifo_flag();
   myCAM.start_capture();
   while (!myCAM.get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));
 
-  SendCapture();
-}
-
-void SendCapture() {
-  Serial.println(F("SendCapture"));
-
-  uint32_t len  = myCAM.read_fifo_length();
-  if (len >= MAX_FIFO_SIZE) //0x5FFFF      //384KByte
+  uint32_t DataSize  = myCAM.read_fifo_length();
+  if (DataSize >= MAX_FIFO_SIZE) //0x5FFFF      //384KByte
   {
     Serial.println(F("Over size."));
-    len = MAX_FIFO_SIZE;
+    DataSize = MAX_FIFO_SIZE;
   }
-  if (len == 0 ) //0 kb
+  if (DataSize == 0 ) //0 kb
   {
     Serial.println(F("Size is 0."));
   }
+  Serial.print(F("Capture Size :")); Serial.println(DataSize);
+  
   myCAM.CS_LOW();
   myCAM.set_fifo_burst();
 
-  WiFiClient client;
-reconnect:
-  Serial.println(F("Try to connect.."));
-  if (!client.connect(HOST, 80)) {
-    client.stop();
-    delay(1000);
-    goto reconnect;
+  const char* host = "www.googleapis.com";
+  const int httpsPort = 443;
+
+  String start_request = api.getStartRequest_Jpeg("Capture", "From ArduCam");
+  String end_request = api.getEndRequest();
+  uint16_t full_length;
+  full_length = start_request.length() + DataSize + end_request.length();
+  String postHeader = api.getPostHeader(full_length);
+
+  String result = "";
+
+  // Use WiFiClientSecure class to create TLS connection
+  WiFiClientSecure client;
+  Serial.print("Connecting to: "); Serial.println(host);
+
+  if (!client.connect(host, httpsPort)) {
+    Serial.println("connection failed");
+    return ;
   }
+
+  Serial.println("[Header]"); Serial.println(postHeader);
+  Serial.println("[start_request]"); Serial.println(start_request);
+  Serial.println("[end_request]"); Serial.println(end_request);
+  client.print(postHeader + start_request);
+
+  uint32_t len = DataSize;
+  static const size_t bufferSize = 1024; // original value 4096 caused split pictures
+  static uint8_t buffer[bufferSize] = {0xFF};
+  while (len) {
+    size_t will_copy = (len < bufferSize) ? len : bufferSize;
+    SPI.transferBytes(&buffer[0], &buffer[0], will_copy);
+    if (!client.connected()) break;
+    client.write(&buffer[0], will_copy);
+    len -= will_copy;
+  }
+
+  client.println(end_request);
+  myCAM.CS_HIGH();
   
-  Serial.print(F("connect host:"));
-  Serial.println(HOST);
+  Serial.println("Receiving response");
+  if (client.connected()) {
+    if (client.find("HTTP/1.1 ")) {
+      String status_code = client.readStringUntil('\r');
+      Serial.print("Status code: "); Serial.println(status_code);
+      if (status_code != "200 OK") {
+        Serial.println("There was an error");
+      }
+    }
 
-  Serial.print(F("Content-Length: "));
-  Serial.println(len);
+    if (client.find("\r\n\r\n")) {
+      Serial.println(F("[Read Data]"));
+    } else {
+      Serial.println(F("[WARNING] Response Data is Nothing"));
+    }
 
-  client.print(String("POST ") + URL + F(" HTTP/1.1\n") +
-               F("Host: ") + HOST + F("\n") +
-               F("Content-Type: text/plain\n") +
-               F("Content-Length: ") + "4" + F("\n") +
-               F("Authorization: Bearer ") + accessToken + F("\n") +
-               F("Connection: close\n\n"));
-
-  Serial.println(F("HTTP Sending..... "));
-
-  client.write("HOGE",4);
-  delay(1000);
-
-  if (client.available()) {
     String line = client.readStringUntil('\r');
-    Serial.print(F("Responce: ")); Serial.println(line);
+    Serial.println(line);
+    result += line;
   }
-  client.stop();
 
-  Serial.println("Picture sent");
+
+  Serial.println(F("Picture sent"));
 }
 
 
@@ -95,6 +113,8 @@ void setup() {
   Nefry.setProgramName("ArduCAM OV2640 Sample");
 
   Nefry.enableSW();
+
+  api.InitAPI();
 
   uint8_t vid, pid;
   uint8_t temp;
@@ -143,6 +163,8 @@ void setup() {
   myCAM.OV2640_set_JPEG_size(OV2640_320x240);
 
   myCAM.clear_fifo_flag();
+  delay(1000);
+
 }
 void loop() {
   if (Nefry.readSW()) {
