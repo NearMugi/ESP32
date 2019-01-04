@@ -14,11 +14,18 @@ class googleAPI {
     String token_uri = "/oauth2/v4/token";
     String drive_uri = "/upload/drive/v3/files?uploadType=multipart";
 
+    //token
     String refresh_token = "";
     String client_id = "";
     String client_secret = "";
     String accessToken = "";
     String parentID = "";
+
+
+    //request
+    String postHeader_base = "";  //リクエストごとにサイズを差し替える
+    String start_request_base = "";  //リクエストごとにファイル名・親フォルダID・コメントを差し替える
+    String end_request = "\r\n--foo_bar_baz--\r\n"; //どのリクエストでも共通
 
   public:
     bool InitAPI() {
@@ -38,11 +45,33 @@ class googleAPI {
       accessToken = GetAccessToken(refresh_token, client_id, client_secret);
       if (accessToken.length() > 0) {
         Serial.println(F("Get New AccessToken"));
-        return true;
       } else {
         Serial.println(F("Fail to Get New AccessToken"));
         return false;
       }
+
+      //リクエストするときのヘッダーなどを設定する
+      postHeader_base = "";
+      postHeader_base = postHeader_base + ("POST " + drive_uri + " HTTP/1.1\r\n") +
+                        ("Host: " + String(host) + ":" + String(httpsPort) + "\r\n") +
+                        ("Connection: close\r\n") +
+                        ("Content-Type: multipart/related; boundary=foo_bar_baz\r\n") +
+                        ("Content-Length: @full_length") +
+                        ("\r\n") +
+                        ("Authorization: Bearer " + accessToken + "\r\n") +
+                        ("\r\n");
+
+      start_request_base = "";
+      start_request_base = start_request_base +
+                           "\r\n--foo_bar_baz\r\n" +
+                           "Content-Type: application/json; charset=UTF-8\r\n" +
+                           "\r\n{\r\n" +
+                           "\t\"name\": \"@fileName\",\r\n" +
+                           "\t\"parents\": [\"@parentID\"],\r\n" +
+                           "\t\"description\": \"@comment\"\r\n" +
+                           "}\r\n\r\n" +
+                           "--foo_bar_baz\r\n" +
+                           "Content-Type: text/plain\r\n\r\n";
     }
 
 
@@ -78,46 +107,27 @@ class googleAPI {
       return token;
     }
 
+
     //テキストファイルをGoogleDriveにアップロードする
     void postDrive_Text(String _fileName, String _textData,  String _comment) {
       Serial.println(F("[Start Post to Drive]"));
-      
+
       uint8_t DataSize = _textData.length();
       uint8_t postData[DataSize];
-      for(int i=0; i< DataSize; i++){
+      for (int i = 0; i < DataSize; i++) {
         postData[i] = (uint8_t)_textData[i];
       }
 
-      String start_request = "";
-      start_request = start_request +
-                      "\r\n--foo_bar_baz\r\n" +
-                      "Content-Type: application/json; charset=UTF-8\r\n" +
-                      "\r\n{\r\n" +
-                      "\t\"name\": \"" + _fileName + "\",\r\n";
-      if (parentID.length() > 0) {
-        start_request += "\t\"parents\": [\"" + parentID + "\"],\r\n";
-      }
-      start_request += "\t\"description\": \"" + _comment + "\"\r\n" +
-                       "}\r\n\r\n" +
-                       "--foo_bar_baz\r\n" +
-                       "Content-Type: text/plain\r\n\r\n";
+      String start_request = start_request_base;
+      start_request.replace("@fileName", _fileName);
+      start_request.replace("@parentID", parentID);
+      start_request.replace("@comment", _comment);
 
-      String end_request = "\r\n--foo_bar_baz--\r\n";
       uint16_t full_length;
       full_length = start_request.length() + DataSize + end_request.length();
 
-
-
-      String postHeader = "";
-      postHeader += ("POST " + drive_uri + " HTTP/1.1\r\n");
-      postHeader += ("Host: " + String(host) + ":" + String(httpsPort) + "\r\n");
-      postHeader += ("Connection: close\r\n");
-      postHeader += ("Content-Type: multipart/related; boundary=foo_bar_baz\r\n");
-      postHeader += ("Content-Length: ");
-      postHeader += (full_length);
-      postHeader += ("\r\n");
-      postHeader += ("Authorization: Bearer " + accessToken + "\r\n");
-      postHeader += ("\r\n");
+      String postHeader = postHeader_base;
+      postHeader.replace("@full_length", String(full_length));
 
       String result = "";
 
