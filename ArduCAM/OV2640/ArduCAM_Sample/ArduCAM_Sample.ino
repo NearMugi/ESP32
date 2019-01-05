@@ -23,10 +23,13 @@ ArduCAM myCAM(OV2640, CS);
 
 void Capture() {
   Serial.println(F("SendCapture"));
-
+  
+  myCAM.flush_fifo();
   myCAM.clear_fifo_flag();
-  myCAM.start_capture();
-  while (!myCAM.get_bit(ARDUCHIP_TRIG, CAP_DONE_MASK));
+  myCAM.start_capture();//撮影情報をカメラモジュールのバッファーにメモリに転送
+  while(!myCAM.get_bit(ARDUCHIP_TRIG , CAP_DONE_MASK)){ // 終わるまで待つ
+    delay(1);
+  }
 
   uint32_t DataSize  = myCAM.read_fifo_length();
   if (DataSize >= MAX_FIFO_SIZE) //0x5FFFF      //384KByte
@@ -116,55 +119,53 @@ void setup() {
 
   api.InitAPI();
 
-  uint8_t vid, pid;
-  uint8_t temp;
   //set the CS as an output:
   pinMode(CS, OUTPUT);
   pinMode(CAM_POWER_ON , OUTPUT);
+  digitalWrite(CS, HIGH);
   digitalWrite(CAM_POWER_ON, HIGH);
 
-  Wire.begin();
+  //カメラ接続確認
+  Serial.println(F("Verify camera module"));
 
-  Serial.println(F("ArduCAM Start!"));
-
-  // initialize SPI:
   SPI.begin();
   SPI.setFrequency(4000000); //4MHz
+  Wire.begin();
 
-  //Check if the ArduCAM SPI bus is OK
-  myCAM.write_reg(ARDUCHIP_TEST1, 0x55);
-  temp = myCAM.read_reg(ARDUCHIP_TEST1);
-  if (temp != 0x55) {
-    Serial.println(F("SPI1 interface Error!"));
-    while (1);
-  }
-
-  //Check if the ArduCAM SPI bus is OK
-  myCAM.write_reg(ARDUCHIP_TEST1, 0x55);
-  temp = myCAM.read_reg(ARDUCHIP_TEST1);
-  if (temp != 0x55) {
-    Serial.println(F("SPI1 interface Error!"));
-    while (1);
-  }
-
-  //Check if the camera module type is OV2640
-  myCAM.wrSensorReg8_8(0xff, 0x01);
+  //I2Cセンサーの確認
+  uint8_t pid = 0;
+  uint8_t vid = 0;
+  myCAM.wrSensorReg8_8(0xFF, 0x01);
   myCAM.rdSensorReg8_8(OV2640_CHIPID_HIGH, &vid);
   myCAM.rdSensorReg8_8(OV2640_CHIPID_LOW, &pid);
-  if ((vid != 0x26 ) && (( pid != 0x41 ) || ( pid != 0x42 ))) {
-    Serial.println(F("Can't find OV2640 module!"));
-  }  else {
-    Serial.println(F("OV2640 detected."));
+  if((vid != 0x26 ) && (( !pid != 0x41 ) || ( pid != 0x42 ))){
+    Serial.println("Camera Not Found (I2C)");
+    return;
   }
+  Serial.println(F("Camera Found (I2C)"));
+  
+  //SPIバッファメモリの確認
+  myCAM.write_reg(ARDUCHIP_TEST1, 0x55);
+  uint8_t temp = myCAM.read_reg(ARDUCHIP_TEST1);
+  if (temp != 0x55) {
+    Serial.println(F("Camera Not Found (SPI)"));
+    return;
+  }
+  Serial.println(F("Camera Found (SPI)"));
 
-  //Change to JPEG capture mode and initialize the OV2640 module
+  //初期設定
+  Serial.println(F("Config camera module"));
   myCAM.set_format(JPEG);
   myCAM.InitCAM();
   myCAM.OV2640_set_JPEG_size(OV2640_320x240);
 
-  myCAM.clear_fifo_flag();
-  delay(1000);
+  //JPEG画質設定
+  myCAM.wrSensorReg8_8(0xFF, 0x00);
+  myCAM.wrSensorReg8_8(0x44, 0x4);  // 0x4:画質優先 0x8:バランス 0xC:圧縮率優先
 
+  delay(4000);  // カメラが安定するまで待つ
+  Serial.println(F("Camera setting is completed"));
+  
 }
 void loop() {
   if (Nefry.readSW()) {
