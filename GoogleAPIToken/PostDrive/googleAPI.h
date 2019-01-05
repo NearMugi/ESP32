@@ -29,7 +29,7 @@ class googleAPI {
     String end_request = "\r\n--foo_bar_baz--\r\n"; //どのリクエストでも共通
 
   public:
-    String getPostHeader(uint16_t len) {
+    String getPostHeader(uint32_t len) {
       if (accessToken.length() > 0) {
         String tmp = postHeader_base;
         tmp.replace("@full_length", String(len));

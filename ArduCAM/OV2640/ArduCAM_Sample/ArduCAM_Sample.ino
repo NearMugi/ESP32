@@ -23,35 +23,77 @@ ArduCAM myCAM(OV2640, CS);
 
 void Capture() {
   Serial.println(F("SendCapture"));
-  
+
   myCAM.flush_fifo();
   myCAM.clear_fifo_flag();
   myCAM.start_capture();//撮影情報をカメラモジュールのバッファーにメモリに転送
-  while(!myCAM.get_bit(ARDUCHIP_TRIG , CAP_DONE_MASK)){ // 終わるまで待つ
+  while (!myCAM.get_bit(ARDUCHIP_TRIG , CAP_DONE_MASK)) { // 終わるまで待つ
     delay(1);
   }
 
-  uint32_t DataSize  = myCAM.read_fifo_length();
-  if (DataSize >= MAX_FIFO_SIZE) //0x5FFFF      //384KByte
+  //カメラモジュールのバッファーメモリからデータを取得
+  static uint32_t MAX_BUF_SIZE = 70000;
+  static uint8_t tmpbuf[70000];
+
+  uint32_t len  = myCAM.read_fifo_length();
+  Serial.print(F("Buffer Size :")); Serial.println(len);
+  if (len >= MAX_BUF_SIZE)
   {
     Serial.println(F("Over size."));
-    DataSize = MAX_FIFO_SIZE;
+    len = MAX_BUF_SIZE;
   }
-  if (DataSize == 0 ) //0 kb
+  if (len == 0 ) //0 kb
   {
     Serial.println(F("Size is 0."));
   }
-  Serial.print(F("Capture Size :")); Serial.println(DataSize);
-  
+
+  uint32_t index = 0;
+  uint8_t prev = 0;
   myCAM.CS_LOW();
   myCAM.set_fifo_burst();
 
+  bool isHeader = false;
+  while (len--) {
+    tmpbuf[index] = SPI.transfer(0x00);
+    //Serial.print(tmpbuf[index]); Serial.print(F(", "));
+
+    //ヘッダーを探す(0xFF,0xD8)
+    if (!isHeader) {
+      if (prev == 0xFF && tmpbuf[index] == 0xD8) {
+        Serial.println(F("JPEG First Data is Found"));
+        tmpbuf[0] = 0xFF;
+        tmpbuf[1] = 0xD8;
+        index = 2;
+        isHeader = true;
+      } else {
+        prev = tmpbuf[index];
+      }
+      continue;
+    }
+
+    // JPEGファイルの最後を検出したら終了(0xFF,0xD9)
+    if (prev == 0xFF && tmpbuf[index] == 0xD9) {
+      Serial.println(F("JPEG Last Data is Found"));
+      myCAM.CS_HIGH();
+      break;
+    }
+
+    prev = tmpbuf[index];
+    index++;
+
+  }
+  myCAM.CS_HIGH();
+  uint32_t DataSize = index;
+  Serial.print(F("JPEG Data Size: ")); Serial.println(DataSize);
+
+
+  //GoogleDriveへポスト
   const char* host = "www.googleapis.com";
   const int httpsPort = 443;
 
   String start_request = api.getStartRequest_Jpeg("Capture", "From ArduCam");
   String end_request = api.getEndRequest();
-  uint16_t full_length;
+  uint32_t full_length;
   full_length = start_request.length() + DataSize + end_request.length();
   String postHeader = api.getPostHeader(full_length);
 
@@ -71,20 +113,20 @@ void Capture() {
   Serial.println("[end_request]"); Serial.println(end_request);
   client.print(postHeader + start_request);
 
-  uint32_t len = DataSize;
-  static const size_t bufferSize = 1024; // original value 4096 caused split pictures
-  static uint8_t buffer[bufferSize] = {0xFF};
-  while (len) {
-    size_t will_copy = (len < bufferSize) ? len : bufferSize;
-    SPI.transferBytes(&buffer[0], &buffer[0], will_copy);
+  //JPEGデータ
+  static const uint16_t bufferSize = 2048; // original value 4096 caused split pictures
+  uint8_t cnt = 0;
+  while (DataSize) {
+    size_t will_copy = (DataSize < bufferSize) ? DataSize : bufferSize;
     if (!client.connected()) break;
-    client.write(&buffer[0], will_copy);
-    len -= will_copy;
+    client.write(&tmpbuf[0 + bufferSize * cnt], will_copy);
+    DataSize -= will_copy;
+    cnt++;
   }
 
   client.println(end_request);
-  myCAM.CS_HIGH();
-  
+
+
   Serial.println("Receiving response");
   if (client.connected()) {
     if (client.find("HTTP/1.1 ")) {
@@ -138,12 +180,12 @@ void setup() {
   myCAM.wrSensorReg8_8(0xFF, 0x01);
   myCAM.rdSensorReg8_8(OV2640_CHIPID_HIGH, &vid);
   myCAM.rdSensorReg8_8(OV2640_CHIPID_LOW, &pid);
-  if((vid != 0x26 ) && (( !pid != 0x41 ) || ( pid != 0x42 ))){
+  if ((vid != 0x26 ) && (( !pid != 0x41 ) || ( pid != 0x42 ))) {
     Serial.println("Camera Not Found (I2C)");
     return;
   }
   Serial.println(F("Camera Found (I2C)"));
-  
+
   //SPIバッファメモリの確認
   myCAM.write_reg(ARDUCHIP_TEST1, 0x55);
   uint8_t temp = myCAM.read_reg(ARDUCHIP_TEST1);
@@ -157,15 +199,18 @@ void setup() {
   Serial.println(F("Config camera module"));
   myCAM.set_format(JPEG);
   myCAM.InitCAM();
-  myCAM.OV2640_set_JPEG_size(OV2640_320x240);
+  //OV2640_320x240, OV2640_640x480, OV2640_800x600, OV2640_1280x1024, OV2640_1600x1200
+  myCAM.OV2640_set_JPEG_size(OV2640_800x600); 
 
   //JPEG画質設定
   myCAM.wrSensorReg8_8(0xFF, 0x00);
   myCAM.wrSensorReg8_8(0x44, 0x4);  // 0x4:画質優先 0x8:バランス 0xC:圧縮率優先
 
   delay(4000);  // カメラが安定するまで待つ
-  Serial.println(F("Camera setting is completed"));
-  
+  Serial.println(F("Camera setting is completed !"));
+
+  Capture();
+
 }
 void loop() {
   if (Nefry.readSW()) {
