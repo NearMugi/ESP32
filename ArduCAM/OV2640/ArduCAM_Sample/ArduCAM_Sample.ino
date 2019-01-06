@@ -126,15 +126,14 @@ void Capture() {
   myCAM.CS_HIGH();
   len += 1;
   Serial.print(F("JPEG Data Size: ")); Serial.println(sizeCnt);
-  Serial.print(F("Rest Data Size: ")); Serial.println(len);
+  Serial.print(F("Remaining Data Size: ")); Serial.println(len);
 
 
   client.println(end_request);
   //バッファーメモリサイズと画像サイズが異なるため、full_lengthに達していない。
   //足りない分の帳尻を合わせる
-  for (int i = 0; i < len; i++) {
-    client.print("\n");
-  }
+  uint8_t tmpbuf[len] = {0x00};
+  client.write(&tmpbuf[0], len);
 
   Serial.println("Receiving response");
   if (client.connected()) {
