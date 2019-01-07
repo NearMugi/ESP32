@@ -13,9 +13,9 @@ googleAPI api;
 const int CS = D5;
 ArduCAM myCAM(OV2640, CS);
 
-void ArduCAM_Init(){
+void ArduCAM_Init() {
   Serial.println(F("Start Camera Setting"));
-    
+
   //set the CS as an output:
   pinMode(CS, OUTPUT);
   digitalWrite(CS, HIGH);
@@ -54,14 +54,14 @@ void ArduCAM_Init(){
   myCAM.InitCAM();
   //OV2640_320x240, OV2640_640x480, OV2640_800x600, OV2640_1280x1024, OV2640_1600x1200
   myCAM.OV2640_set_JPEG_size(OV2640_1600x1200);
-  
+
   //JPEG画質設定
   myCAM.wrSensorReg8_8(0xFF, 0x00);
   myCAM.wrSensorReg8_8(0x44, 0x4);  // 0x4:画質優先 0x8:バランス 0xC:圧縮率優先
 
   delay(4000);  // カメラが安定するまで待つ
   Serial.println(F("Camera setting is completed !"));
-  
+
 }
 
 void ArduCAM_Capture() {
@@ -75,7 +75,7 @@ void ArduCAM_Capture() {
 
   uint32_t ReadSize  = myCAM.read_fifo_length();
   Serial.print(F("Read Size :")); Serial.println(ReadSize);
-  if (ReadSize >= MAX_FIFO_SIZE){
+  if (ReadSize >= MAX_FIFO_SIZE) {
     Serial.println(F("Over size."));
     ReadSize = MAX_FIFO_SIZE;
   }
@@ -202,7 +202,7 @@ void setup() {
 
   api.InitAPI();
   ArduCAM_Init();
-  
+
   ArduCAM_Capture();
 
 }
