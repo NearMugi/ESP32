@@ -83,7 +83,6 @@ void ArduCAM_Capture() {
 
 
   //GoogleDriveへポスト
-
   String start_request = api.getStartRequest_Jpeg("Capture", "From ArduCam");
   String end_request = api.getEndRequest();
   uint32_t full_length;
