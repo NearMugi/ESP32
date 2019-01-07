@@ -9,8 +9,6 @@
 #define NEFRY_DATASTORE_PARENT 8
 
 class googleAPI {
-    const char* host = "www.googleapis.com";
-    const int httpsPort = 443;
     String token_uri = "/oauth2/v4/token";
     String drive_uri = "/upload/drive/v3/files?uploadType=multipart";
 
@@ -29,6 +27,9 @@ class googleAPI {
     String end_request = "\r\n--foo_bar_baz--\r\n"; //どのリクエストでも共通
 
   public:
+    const char* host = "www.googleapis.com";
+    const int httpsPort = 443;
+
     String getPostHeader(uint32_t len) {
       if (accessToken.length() > 0) {
         String tmp = postHeader_base;
