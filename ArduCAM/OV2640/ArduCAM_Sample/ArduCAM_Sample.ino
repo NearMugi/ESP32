@@ -2,9 +2,19 @@
 #include <NefryDisplay.h>
 #include <Wire.h>
 #include <WiFiClientSecure.h>
+#include <NefrySetting.h>
+void setting() {
+  Nefry.disableDisplayStatus();
+}
+NefrySetting nefrySetting(setting);
 
 #include "googleAPI.h"
 googleAPI api;
+// Data Store
+// 5:Refresh Token
+// 6:Client ID
+// 7:Client Secret
+// 8:Parent Folder
 
 #include "ArduCAM.h"
 #include <SPI.h>
@@ -13,7 +23,7 @@ googleAPI api;
 const int CS = D5;
 ArduCAM myCAM(OV2640, CS);
 
-void ArduCAM_Init() {
+bool ArduCAM_Init() {
   Serial.println(F("Start Camera Setting"));
 
   //set the CS as an output:
@@ -35,7 +45,7 @@ void ArduCAM_Init() {
   myCAM.rdSensorReg8_8(OV2640_CHIPID_LOW, &pid);
   if ((vid != 0x26 ) && (( !pid != 0x41 ) || ( pid != 0x42 ))) {
     Serial.println("Camera Not Found (I2C)");
-    return;
+    return false;
   }
   Serial.println(F("Camera Found (I2C)"));
 
@@ -44,7 +54,7 @@ void ArduCAM_Init() {
   uint8_t temp = myCAM.read_reg(ARDUCHIP_TEST1);
   if (temp != 0x55) {
     Serial.println(F("Camera Not Found (SPI)"));
-    return;
+    return false;
   }
   Serial.println(F("Camera Found (SPI)"));
 
@@ -62,10 +72,17 @@ void ArduCAM_Init() {
   delay(4000);  // カメラが安定するまで待つ
   Serial.println(F("Camera setting is completed !"));
 
+  return true;
 }
 
 void ArduCAM_Capture() {
-  Serial.println(F("SendCapture"));
+  NefryDisplay.clear();
+  NefryDisplay.setFont(ArialMT_Plain_10);
+  String msg = "";
+
+  msg = F("Start Caputure and Send");
+  SetDebugMsg(msg, 0);
+
 
   //撮影情報をカメラモジュールのバッファーにメモリに転送
   myCAM.flush_fifo();
@@ -96,7 +113,8 @@ void ArduCAM_Capture() {
   Serial.print("Connecting to: "); Serial.println(api.host);
 
   if (!client.connect(api.host, api.httpsPort)) {
-    Serial.println("connection failed");
+    msg = F("connection failed");
+    SetDebugMsg(msg, 10);
     return;
   }
 
@@ -159,8 +177,17 @@ void ArduCAM_Capture() {
   }
   myCAM.CS_HIGH();
   ReadSize += 1;
-  Serial.print(F("JPEG Data Size: ")); Serial.println(sizeCnt);
-  Serial.print(F("Remaining Data Size: ")); Serial.println(ReadSize);
+
+  msg = F("Success Read Buffer");
+  SetDebugMsg(msg, 10);
+
+  msg = F("JPEG Data Size: ");
+  msg += sizeCnt;
+  SetDebugMsg(msg, 20);
+
+  msg = F("Remaining Data Size: ");
+  msg += ReadSize;
+  SetDebugMsg(msg, 30);
 
   client.println(end_request);
   //バッファーメモリサイズと画像サイズが異なるため、full_lengthに達していない。
@@ -174,35 +201,56 @@ void ArduCAM_Capture() {
       String status_code = client.readStringUntil('\r');
       Serial.print(F("Status code: ")); Serial.println(status_code);
       if (status_code != "200 OK") {
-        Serial.println(F("There was an error"));
+        msg = F("[ERR] Status code:");
+        msg += status_code;
+        SetDebugMsg(msg, 40);
       }
     }
 
     if (client.find("\r\n\r\n")) {
-      Serial.println(F("[Read Data]"));
+      result = client.readStringUntil('\r');
+      msg = F("Success!!!\n");
+      msg += result;
+      SetDebugMsg(msg, 40);
+
     } else {
-      Serial.println(F("[WARNING] Response Data is Nothing"));
+      msg = F("[WARNING] Response Data is Nothing");
+      SetDebugMsg(msg, 40);
     }
 
-    String line = client.readStringUntil('\r');
-    Serial.println(line);
-    result += line;
   }
 
-  Serial.println(F("Picture Sending is completed !"));
+  Serial.println(F("Picture Sending is End"));
 }
 
-
+void SetDebugMsg(String msg, int pos) {
+  Serial.println(msg);
+  NefryDisplay.drawString(pos, 0, msg);
+}
 
 void setup() {
   Nefry.setProgramName("ArduCAM OV2640 Sample");
 
+  NefryDisplay.begin();
+  NefryDisplay.setAutoScrollFlg(true);//自動スクロールを有効
+
+  NefryDisplay.clear();
+  NefryDisplay.display();
+  Nefry.ndelay(10);
+
   Nefry.enableSW();
 
+  NefryDisplay.setFont(ArialMT_Plain_10);
   api.InitAPI();
-  ArduCAM_Init();
+  NefryDisplay.drawString(0, 0, F("End API Setting"));
 
-  ArduCAM_Capture();
+  bool isSuc = ArduCAM_Init();
+  if (isSuc) {
+    NefryDisplay.drawString(10, 0, F("Success in Camera Setting"));
+  } else {
+    NefryDisplay.drawString(10, 0, F("Fail in Camera Setting"));
+  }
+
 
 }
 void loop() {
