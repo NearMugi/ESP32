@@ -211,9 +211,9 @@ class googleAPI {
 
         if (client.find("\r\n\r\n")) {
           result = client.readStringUntil('\r');
-          resMsg = F("Success!!!\n");
-          resMsg += result;
+          resMsg = F("Success!!!");
           Serial.println(resMsg);
+          Serial.println(result);
 
         } else {
           resMsg = F("[WARNING] Response Data is Nothing");

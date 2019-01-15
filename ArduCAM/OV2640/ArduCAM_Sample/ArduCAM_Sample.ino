@@ -16,6 +16,10 @@ googleAPI api;
 // 7:Client Secret
 // 8:Parent Folder
 
+//date
+#include <time.h>
+#define JST     3600*9
+
 #include "ArduCAM.h"
 #include <SPI.h>
 #include "memorysaver.h"
@@ -75,13 +79,18 @@ bool ArduCAM_Init() {
   return true;
 }
 
-void ArduCAM_Capture() {
-  NefryDisplay.clear();
-  NefryDisplay.setFont(ArialMT_Plain_10);
+void ArduCAM_Capture(String fn, String comment) {
+  Serial.println(F("Start Caputure and Send"));
+
   String msg = "";
 
-  msg = F("Start Caputure and Send");
-  SetDebugMsg(msg, 0);
+  NefryDisplay.clear();
+  NefryDisplay.setFont(ArialMT_Plain_10);
+  NefryDisplay.drawString(0, 0, F("File:"));
+  NefryDisplay.drawString(20, 0, fn);
+  NefryDisplay.drawString(0, 10, F("Comment:"));
+  NefryDisplay.drawString(50, 10, comment);
+  NefryDisplay.display();
 
 
   //撮影情報をカメラモジュールのバッファーにメモリに転送
@@ -100,7 +109,7 @@ void ArduCAM_Capture() {
 
 
   //GoogleDriveへポスト
-  String start_request = api.getStartRequest_Jpeg("Capture", "From ArduCam");
+  String start_request = api.getStartRequest_Jpeg(fn, comment);
   String end_request = api.getEndRequest();
   uint32_t full_length;
   full_length = start_request.length() + ReadSize + end_request.length();
@@ -114,7 +123,7 @@ void ArduCAM_Capture() {
 
   if (!client.connect(api.host, api.httpsPort)) {
     msg = F("connection failed");
-    SetDebugMsg(msg, 10);
+    SetDebugMsg(msg, 20);
     return;
   }
 
@@ -178,17 +187,18 @@ void ArduCAM_Capture() {
   myCAM.CS_HIGH();
   ReadSize += 1;
 
-  msg = F("Success Read Buffer");
-  SetDebugMsg(msg, 10);
+  msg = F("Finished Reading Buffer");
+  SetDebugMsg(msg, 20);
 
   msg = F("JPEG Data Size: ");
   msg += sizeCnt;
-  SetDebugMsg(msg, 20);
+  SetDebugMsg(msg, 30);
 
   msg = F("Remaining Data Size: ");
   msg += ReadSize;
-  SetDebugMsg(msg, 30);
-
+  //SetDebugMsg(msg, 40);
+  Serial.println(msg);
+  
   client.println(end_request);
   //バッファーメモリサイズと画像サイズが異なるため、full_lengthに達していない。
   //足りない分の帳尻を合わせる
@@ -203,19 +213,19 @@ void ArduCAM_Capture() {
       if (status_code != "200 OK") {
         msg = F("[ERR] Status code:");
         msg += status_code;
-        SetDebugMsg(msg, 40);
+        SetDebugMsg(msg, 50);
       }
     }
 
     if (client.find("\r\n\r\n")) {
       result = client.readStringUntil('\r');
-      msg = F("Success!!!\n");
-      msg += result;
-      SetDebugMsg(msg, 40);
+      msg = F("Success!!!");
+      SetDebugMsg(msg, 50);
+      Serial.println(result);
 
     } else {
       msg = F("[WARNING] Response Data is Nothing");
-      SetDebugMsg(msg, 40);
+      SetDebugMsg(msg, 50);
     }
 
   }
@@ -225,7 +235,8 @@ void ArduCAM_Capture() {
 
 void SetDebugMsg(String msg, int pos) {
   Serial.println(msg);
-  NefryDisplay.drawString(pos, 0, msg);
+  NefryDisplay.drawString(0, pos, msg);
+  NefryDisplay.display();
 }
 
 void setup() {
@@ -234,27 +245,49 @@ void setup() {
   NefryDisplay.begin();
   NefryDisplay.setAutoScrollFlg(true);//自動スクロールを有効
 
-  NefryDisplay.clear();
-  NefryDisplay.display();
-  Nefry.ndelay(10);
+  //date
+  configTime( JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
 
   Nefry.enableSW();
 
+  NefryDisplay.clear();
   NefryDisplay.setFont(ArialMT_Plain_10);
+  NefryDisplay.drawString(0, 0, F("[Post Jpeg File]"));
+  NefryDisplay.drawString(0, 10, F("Init API Setting..."));
+  NefryDisplay.display();
+
   api.InitAPI();
-  NefryDisplay.drawString(0, 0, F("End API Setting"));
+
+  NefryDisplay.drawString(0, 20, F("Success in Setting!"));
+  NefryDisplay.drawString(0, 30, F("Camera Setting..."));
+  NefryDisplay.display();
 
   bool isSuc = ArduCAM_Init();
   if (isSuc) {
-    NefryDisplay.drawString(10, 0, F("Success in Camera Setting"));
+    NefryDisplay.drawString(0, 40, F("Success in Camera Setting"));
+    NefryDisplay.drawString(0, 50, F("Waiting Push Btn..."));
   } else {
-    NefryDisplay.drawString(10, 0, F("Fail in Camera Setting"));
+    NefryDisplay.drawString(0, 40, F("Fail in Camera Setting"));
   }
+
+  NefryDisplay.display();
+  Nefry.ndelay(10);
 
 
 }
 void loop() {
   if (Nefry.readSW()) {
-    ArduCAM_Capture();
+
+    //日付を取得する
+    time_t  t = time(NULL);
+    struct tm *tm;
+    tm = localtime(&t);
+    char _fn[20] = "";
+    sprintf(_fn, "%04d%02d%02d_%02d%02d%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
+
+    String fn = String(_fn);
+    String comment = "From ArduCam";
+
+    ArduCAM_Capture(fn, comment);
   }
 }
