@@ -158,7 +158,9 @@ class googleAPI {
 
 
     //テキストファイルをGoogleDriveにアップロードする
-    void postDrive_Text(String _fileName, String _textData,  String _comment) {
+    String postDrive_Text(String _fileName, String _textData,  String _comment) {
+      String resMsg = "Something is wrong...";
+
       Serial.println(F("[Start Post to Drive]"));
 
       uint8_t DataSize = _textData.length();
@@ -180,8 +182,9 @@ class googleAPI {
       Serial.print("Connecting to: "); Serial.println(host);
 
       if (!client.connect(host, httpsPort)) {
-        Serial.println("connection failed");
-        return ;
+        resMsg = F("connection failed");
+        Serial.println(resMsg);
+        return resMsg;
       }
 
       Serial.println("[Header]"); Serial.println(postHeader);
@@ -199,22 +202,28 @@ class googleAPI {
           String status_code = client.readStringUntil('\r');
           Serial.print("Status code: "); Serial.println(status_code);
           if (status_code != "200 OK") {
-            Serial.println("There was an error");
+            resMsg = F("[ERR] Status code:");
+            resMsg += status_code;
+            Serial.println(resMsg);
+            return resMsg;
           }
         }
 
         if (client.find("\r\n\r\n")) {
-          Serial.println(F("[Read Data]"));
+          result = client.readStringUntil('\r');
+          resMsg = F("Success!!!\n");
+          resMsg += result;
+          Serial.println(resMsg);
+
         } else {
-          Serial.println(F("[WARNING] Response Data is Nothing"));
+          resMsg = F("[WARNING] Response Data is Nothing");
+          Serial.println(resMsg);
         }
 
-        String line = client.readStringUntil('\r');
-        Serial.println(line);
-        result += line;
       }
 
       Serial.println("closing connection");
+      return resMsg;
     }
 
   private:
