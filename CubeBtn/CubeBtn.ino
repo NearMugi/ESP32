@@ -21,20 +21,12 @@ NefrySetting nefrySetting(setting);
 //使用ピン
 #define PIN_JIKI A3
 #define PIN_BTN D8
-#define PIN_LED_WAIT D0
-#define PIN_LED_PTN1 D1
-#define PIN_LED_PTN2 D2
-#define PIN_LED_PTN3 D3
-#define PIN_LED_PTN4 D4
-#define PIN_LED_PTN5 D5
-#define PIN_LED_PTN6 D6
 
 //ループ周期(us)
 #include "interval.h"
 #define LOOPTIME_DISP  100000
 #define LOOPTIME_JIKI  30000
 #define LOOPTIME_BTN   30000
-#define LOOPTIME_LED   100000
 #define LOOPTIME_MQTT  500000
 
 //ステータス
@@ -264,13 +256,6 @@ void setup() {
   //pin
   pinMode(PIN_JIKI, INPUT);
   pinMode(PIN_BTN, INPUT);
-  pinMode(PIN_LED_WAIT, OUTPUT);
-  pinMode(PIN_LED_PTN1, OUTPUT);
-  pinMode(PIN_LED_PTN2, OUTPUT);
-  pinMode(PIN_LED_PTN3, OUTPUT);
-  pinMode(PIN_LED_PTN4, OUTPUT);
-  pinMode(PIN_LED_PTN5, OUTPUT);
-  pinMode(PIN_LED_PTN6, OUTPUT);
 
   //mqtt
   client.setServer(BBT, 1883);
@@ -280,8 +265,6 @@ void setup() {
 
   //date
   configTime( JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
-
-
 
   //グラフ
   dispGraphLine_init();
@@ -403,42 +386,6 @@ void loopBtn() {
 
 }
 
-void loopLED() {
-  if (nowStatus == STATUS_MQTT_SUC) {
-    digitalWrite(PIN_LED_WAIT, HIGH);
-  } else {
-    digitalWrite(PIN_LED_WAIT, LOW);
-  }
-
-  digitalWrite(PIN_LED_PTN1, LOW);
-  digitalWrite(PIN_LED_PTN2, LOW);
-  digitalWrite(PIN_LED_PTN3, LOW);
-  digitalWrite(PIN_LED_PTN4, LOW);
-  digitalWrite(PIN_LED_PTN5, LOW);
-  digitalWrite(PIN_LED_PTN6, LOW);
-
-  switch (jikiPtn) {
-    case JIKI_PTN1:
-      digitalWrite(PIN_LED_PTN1, HIGH);
-      break;
-    case JIKI_PTN2:
-      digitalWrite(PIN_LED_PTN2, HIGH);
-      break;
-    case JIKI_PTN3:
-      digitalWrite(PIN_LED_PTN3, HIGH);
-      break;
-    case JIKI_PTN4:
-      digitalWrite(PIN_LED_PTN4, HIGH);
-      break;
-    case JIKI_PTN5:
-      digitalWrite(PIN_LED_PTN5, HIGH);
-      break;
-    case JIKI_PTN6:
-      digitalWrite(PIN_LED_PTN6, HIGH);
-      break;
-  }
-
-}
 
 void loopMQTT() {
   //送信中の待ち
@@ -487,11 +434,6 @@ void loop() {
   //Button
   interval<LOOPTIME_BTN>::run([] {
     loopBtn();
-  });
-
-  //LED
-  interval<LOOPTIME_LED>::run([] {
-    loopLED();
   });
 
   //MQTT publish
