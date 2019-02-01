@@ -3,6 +3,7 @@
 #include <ArduinoJson.h>
 #include <WiFiClientSecure.h>
 
+#define NEFRY_DATASTORE_BUCKET 4
 #define NEFRY_DATASTORE_REFRESH_TOKEN 5
 #define NEFRY_DATASTORE_CLIENT_ID 6
 #define NEFRY_DATASTORE_CLIENT_SECRET 7
@@ -11,6 +12,7 @@
 class googleAPI {
     String token_uri = "/oauth2/v4/token";
     String drive_uri = "/upload/drive/v3/files?uploadType=multipart";
+    String storage_uri = "/upload/storage/v1/b/@myBucket/o?uploadType=multipart";
 
     //token
     String refresh_token = "";
@@ -18,10 +20,11 @@ class googleAPI {
     String client_secret = "";
     String accessToken = "";
     String parentID = "";
-
+    String bucket = "";
 
     //request
-    String postHeader_base = "";  //リクエストごとにサイズを差し替える
+    String postHeader_base_drive = "";  //リクエストごとにサイズを差し替える
+    String postHeader_base_storage = "";  //リクエストごとにサイズを差し替える
     String start_request_text_base = "";  //リクエストごとにファイル名・親フォルダID・コメントを差し替える
     String start_request_jpeg_base = "";  //リクエストごとにファイル名・親フォルダID・コメントを差し替える
     String end_request = "\r\n--foo_bar_baz--\r\n"; //どのリクエストでも共通
@@ -30,9 +33,9 @@ class googleAPI {
     const char* host = "www.googleapis.com";
     const int httpsPort = 443;
 
-    String getPostHeader(uint32_t len) {
+    String getPostHeader(String header, uint32_t len) {
       if (accessToken.length() > 0) {
-        String tmp = postHeader_base;
+        String tmp = header;
         tmp.replace("@full_length", String(len));
         return tmp;
       } else {
@@ -73,11 +76,13 @@ class googleAPI {
 
 
     bool InitAPI() {
+      Nefry.setStoreTitleStr("Storage Bucket Name", NEFRY_DATASTORE_BUCKET);
       Nefry.setStoreTitleStr("Refresh Token", NEFRY_DATASTORE_REFRESH_TOKEN);
       Nefry.setStoreTitleStr("Client ID", NEFRY_DATASTORE_CLIENT_ID);
       Nefry.setStoreTitleStr("Client Secret", NEFRY_DATASTORE_CLIENT_SECRET);
       Nefry.setStoreTitleStr("ParentFolder ID", NEFRY_DATASTORE_PARENT);
 
+      bucket = Nefry.getStoreStr(NEFRY_DATASTORE_BUCKET);
       refresh_token = Nefry.getStoreStr(NEFRY_DATASTORE_REFRESH_TOKEN);
       client_id = Nefry.getStoreStr(NEFRY_DATASTORE_CLIENT_ID);
       client_secret = Nefry.getStoreStr(NEFRY_DATASTORE_CLIENT_SECRET);
@@ -96,15 +101,22 @@ class googleAPI {
       }
 
       //リクエストするときのヘッダーなどを設定する
-      postHeader_base = "";
-      postHeader_base = postHeader_base + ("POST " + drive_uri + " HTTP/1.1\r\n") +
-                        ("Host: " + String(host) + ":" + String(httpsPort) + "\r\n") +
-                        ("Connection: close\r\n") +
-                        ("Content-Type: multipart/related; boundary=foo_bar_baz\r\n") +
-                        ("Content-Length: @full_length") +
-                        ("\r\n") +
-                        ("Authorization: Bearer " + accessToken + "\r\n") +
-                        ("\r\n");
+      String tmpHeader = "";
+      tmpHeader = tmpHeader + ("POST @URI HTTP/1.1\r\n") +
+                  ("Host: " + String(host) + ":" + String(httpsPort) + "\r\n") +
+                  ("Connection: close\r\n") +
+                  ("Content-Type: multipart/related; boundary=foo_bar_baz\r\n") +
+                  ("Content-Length: @full_length") +
+                  ("\r\n") +
+                  ("Authorization: Bearer " + accessToken + "\r\n") +
+                  ("\r\n");
+
+      postHeader_base_drive = tmpHeader;
+      postHeader_base_drive.replace("@URI", drive_uri);
+
+      postHeader_base_storage = tmpHeader;
+      postHeader_base_storage.replace("@URI", storage_uri);
+      postHeader_base_storage.replace("@myBucket", bucket);
 
       start_request_text_base = "";
       start_request_jpeg_base = "";
@@ -156,12 +168,23 @@ class googleAPI {
       return token;
     }
 
-
     //テキストファイルをGoogleDriveにアップロードする
     String postDrive_Text(String _fileName, String _textData,  String _comment) {
+      return postText(_fileName, _textData, _comment, postHeader_base_drive);
+    }
+
+    //テキストファイルをGCP Storageにアップロードする
+    String postStorage_Text(String _fileName, String _textData,  String _comment) {
+      return postText(_fileName, _textData, _comment, postHeader_base_storage);
+    }
+
+  private:
+  
+    //指定のヘッダーを使ってテキストファイルをアップロードする
+    String postText(String _fileName, String _textData,  String _comment, String header) {
       String resMsg = "Something is wrong...";
 
-      Serial.println(F("[Start Post to Drive]"));
+      Serial.println(F("[Start Post Text]"));
 
       uint8_t DataSize = _textData.length();
       uint8_t postData[DataSize];
@@ -173,7 +196,7 @@ class googleAPI {
 
       uint16_t full_length;
       full_length = start_request.length() + DataSize + end_request.length();
-      String postHeader = getPostHeader(full_length);
+      String postHeader = getPostHeader(header, full_length);
 
       String result = "";
 
@@ -226,7 +249,6 @@ class googleAPI {
       return resMsg;
     }
 
-  private:
     //サーバーにデータをポストする
     String postRequest(const char* server, String header, String data) {
 

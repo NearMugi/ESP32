@@ -20,7 +20,7 @@ googleAPI api;
 #define JST     3600*9
 
 void setup() {
-  Nefry.setProgramName("Post GoogleDrive");
+  Nefry.setProgramName("Post GCP Storage ");
 
   NefryDisplay.begin();
   NefryDisplay.setAutoScrollFlg(true);//自動スクロールを有効
@@ -71,7 +71,7 @@ void loop() {
     NefryDisplay.drawString(50, 20, comment);
     NefryDisplay.display();
 
-    String msg = api.postDrive_Text(fn, txtData, comment);
+    String msg = api.postStorage_Text(fn, txtData, comment);
 
     NefryDisplay.drawString(0, 30, msg);
     NefryDisplay.display();
