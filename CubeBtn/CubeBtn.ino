@@ -94,50 +94,48 @@ String MsgPublishData;
 //++++++++++++++++++++++++++++++++++++++++++++
 //折れ線グラフ
 //++++++++++++++++++++++++++++++++++++++++++++
-#include "dispGraphLine.h"
+#include "dispGraphBar.h"
 //static変数を定義
-int graph_line::valueSIZE;
+int graph_bar::valueSIZE;
 
-//折れ線グラフの領域
-#define GRAPH_LINE_POS_X 27
-#define GRAPH_LINE_POS_Y 30
-#define GRAPH_LINE_LEN_X 100
-#define GRAPH_LINE_LEN_Y 30
-#define GRAPH_LEN_DPP 10 //点をプロットする間隔(1なら1ドットにつき1点、2なら2ドットにつき1点)
+//棒グラフ(横方向)の領域
+#define GRAPH_BARS_POS_X 50
+#define GRAPH_BARS_POS_Y 50
+#define GRAPH_BARS_LEN_X 70
+#define GRAPH_BARS_LEN_Y 10
 
-#define VALUE_LINE_MIN 0
-#define VALUE_LINE_MAX 4098 //esp32は分解能12bit
-#define LINE_PLOT_SIZE (GRAPH_LINE_LEN_X / GRAPH_LEN_DPP) + 1
-int x[LINE_PLOT_SIZE];  //x座標
-int t[LINE_PLOT_SIZE];  //一定間隔に垂線を引くための配列(垂線の有無)
-graph_line grline = graph_line(
-                      LOOPTIME_DISP,
-                      GRAPH_LINE_POS_X,
-                      GRAPH_LINE_POS_Y,
-                      GRAPH_LINE_LEN_X,
-                      GRAPH_LINE_LEN_Y,
-                      GRAPH_LEN_DPP,
-                      VALUE_LINE_MIN,
-                      VALUE_LINE_MAX,
-                      LINE_PLOT_SIZE,
-                      &x[0],
-                      &t[0]
-                    );
+#define VALUE_BAR_MIN 0
+#define VALUE_BAR_MAX 4098 //esp32は分解能12bit
+#define BAR_PLOT_SIZE 20  //保存するデータ数
+graph_bar grbar;
 
 //グラフの設定
-//頂点の数が可変なので外部で配列を用意している
-int v1[LINE_PLOT_SIZE]; //頂点の値
+//保存するデータ数が可変なので外部で配列を用意している
+//縦方向と横方向は同じデータを使う
+int vb1[BAR_PLOT_SIZE];
 
 //グラフの初期化
-void dispGraphLine_init() {
-  grline.initGraphTime();
-  grline.setGraph(0, &v1[0], VERTEX_CIR);
+void dispGraphBarS_init() {
+  grbar = graph_bar(
+            BAR_SIDE,
+            LOOPTIME_DISP,
+            GRAPH_BARS_POS_X,
+            GRAPH_BARS_POS_Y,
+            GRAPH_BARS_LEN_X,
+            GRAPH_BARS_LEN_Y,
+            VALUE_BAR_MIN,
+            VALUE_BAR_MAX,
+            BAR_PLOT_SIZE
+          );
+  grbar.initGraphTime();
+  grbar.setGraph(0, &vb1[0]);
 }
 
-//グラフの描画
-void dispGraphLine_update() {
-  grline.dispArea();
-  grline.updateGraph();
+
+//棒グラフ(横方向)の描画
+void dispGraphBarS_update() {
+  grbar.dispArea();
+  grbar.updateGraph();
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++
@@ -275,7 +273,7 @@ void setup() {
   configTime( JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
 
   //グラフ
-  dispGraphLine_init();
+  dispGraphBarS_init();
 
   //スリープ
   sleepCnt = 0;
@@ -292,9 +290,8 @@ void loopDisplay() {
   ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
 
   //グラフデータの更新
-  grline.addGraphData(0, jiki[JIKI_SIZE - 1]);
-  grline.setAvg(0, jikiAvg);
-  grline.updateGraphTime();
+  grbar.addGraphData(0, jiki[JIKI_SIZE - 1]);
+  grbar.updateGraphTime();
 
   //描画
   NefryDisplay.clear();
@@ -307,7 +304,7 @@ void loopDisplay() {
   //  NefryDisplay.drawString(0, 30, MsgPublishData);
 
   //グラフの描画
-  dispGraphLine_update();
+  dispGraphBarS_update();
 
   NefryDisplay.display();
 }
@@ -452,9 +449,9 @@ void loop() {
     if (!client.connected()) reconnect();
     loopMQTT();
   });
-  
+
   //Sleep
   interval<LOOPTIME_SLEEP_CNT>::run([] {
-    if(++sleepCnt >= SLEEP_CNT_S) Nefry.sleep(0);
-  });  
+    if (++sleepCnt >= SLEEP_CNT_S) Nefry.sleep(0);
+  });
 }
