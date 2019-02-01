@@ -28,6 +28,8 @@ NefrySetting nefrySetting(setting);
 #define LOOPTIME_JIKI  30000
 #define LOOPTIME_BTN   30000
 #define LOOPTIME_MQTT  500000
+#define LOOPTIME_SLEEP_CNT  1000000
+
 
 //ステータス
 #define STATUS_NONE "NONE"
@@ -39,6 +41,12 @@ String nowStatus = STATUS_TAIKI;
 //MQTT送信中の待ち時間(ms)
 #define WAIT_MQTT_PUBLISH 5000
 unsigned long waitingTime;
+
+//++++++++++++++++++++++++++++++++++++++++++++
+//スリープ
+//++++++++++++++++++++++++++++++++++++++++++++
+const unsigned int SLEEP_CNT_S = 3600;  //スリープに入るまでのカウント(秒)
+unsigned int sleepCnt;
 
 //++++++++++++++++++++++++++++++++++++++++++++
 //磁気センサ
@@ -268,6 +276,9 @@ void setup() {
 
   //グラフ
   dispGraphLine_init();
+
+  //スリープ
+  sleepCnt = 0;
 }
 
 
@@ -441,4 +452,9 @@ void loop() {
     if (!client.connected()) reconnect();
     loopMQTT();
   });
+  
+  //Sleep
+  interval<LOOPTIME_SLEEP_CNT>::run([] {
+    if(++sleepCnt >= SLEEP_CNT_S) Nefry.sleep(0);
+  });  
 }
