@@ -99,9 +99,9 @@ String MsgPublishData;
 int graph_bar::valueSIZE;
 
 //棒グラフ(横方向)の領域
-#define GRAPH_BARS_POS_X 50
-#define GRAPH_BARS_POS_Y 50
-#define GRAPH_BARS_LEN_X 70
+#define GRAPH_BARS_POS_X 75
+#define GRAPH_BARS_POS_Y 54
+#define GRAPH_BARS_LEN_X 40
 #define GRAPH_BARS_LEN_Y 10
 
 #define VALUE_BAR_MIN 0
@@ -167,11 +167,11 @@ void reconnect() {
   // Attempt to connect
   if (client.connect(clientId.c_str(), tmp, "")) {
     Serial.println("connected");
-    MsgMqtt = "Mqtt Connected";
+    MsgMqtt = "Mqtt OK";
   } else {
     Serial.print("failed, rc=");
     Serial.println(client.state());
-    MsgMqtt = "Mqtt DisConnected";
+    MsgMqtt = "Mqtt NG";
   }
 }
 
@@ -297,11 +297,11 @@ void loopDisplay() {
   NefryDisplay.clear();
 
   NefryDisplay.setFont(ArialMT_Plain_10);
-  NefryDisplay.drawString(0, 0, String(jikiPtn));
-  NefryDisplay.drawString(7, 0, nowStatus);
-  NefryDisplay.drawString(45, 0, ipStr);
-  NefryDisplay.drawString(0, 10, MsgMqtt);
-  //  NefryDisplay.drawString(0, 30, MsgPublishData);
+  NefryDisplay.drawString(0, 54, String(jikiPtn));
+  NefryDisplay.drawString(7, 54, nowStatus);
+  NefryDisplay.drawString(0, 44, ipStr);
+  NefryDisplay.drawString(60, 44, MsgMqtt);
+  NefryDisplay.drawString(68, 54, String(jikiAvg));
 
   //グラフの描画
   dispGraphBarS_update();
