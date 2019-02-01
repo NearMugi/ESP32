@@ -23,13 +23,14 @@ class googleAPI {
     String bucket = "";
 
     //request
-    String postHeader_base_drive = "";  //リクエストごとにサイズを差し替える
-    String postHeader_base_storage = "";  //リクエストごとにサイズを差し替える
     String start_request_text_base = "";  //リクエストごとにファイル名・親フォルダID・コメントを差し替える
     String start_request_jpeg_base = "";  //リクエストごとにファイル名・親フォルダID・コメントを差し替える
     String end_request = "\r\n--foo_bar_baz--\r\n"; //どのリクエストでも共通
 
   public:
+    String postHeader_base_drive = "";  //リクエストごとにサイズを差し替える
+    String postHeader_base_storage = "";  //リクエストごとにサイズを差し替える
+
     const char* host = "www.googleapis.com";
     const int httpsPort = 443;
 

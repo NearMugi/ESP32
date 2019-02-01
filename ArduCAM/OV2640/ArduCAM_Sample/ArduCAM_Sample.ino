@@ -11,6 +11,7 @@ NefrySetting nefrySetting(setting);
 #include "googleAPI.h"
 googleAPI api;
 // Data Store
+// 4:Storage Bucket
 // 5:Refresh Token
 // 6:Client ID
 // 7:Client Secret
@@ -108,12 +109,18 @@ void ArduCAM_Capture(String fn, String comment) {
   if (ReadSize == 0 ) Serial.println(F("Size is 0."));
 
 
-  //GoogleDriveへポスト
+  //ポスト
   String start_request = api.getStartRequest_Jpeg(fn, comment);
   String end_request = api.getEndRequest();
   uint32_t full_length;
   full_length = start_request.length() + ReadSize + end_request.length();
-  String postHeader = api.getPostHeader(full_length);
+
+  //Drive or GCP Storage
+#if true  
+  String postHeader = api.getPostHeader(api.postHeader_base_drive, full_length);
+#else
+  String postHeader = api.getPostHeader(api.postHeader_base_storage, full_length);
+#endif
 
   String result = "";
 
