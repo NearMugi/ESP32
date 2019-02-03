@@ -476,6 +476,12 @@ void loop() {
 
   //Sleep
   interval<LOOPTIME_SLEEP_CNT>::run([] {
-    if (++sleepCnt >= SLEEP_CNT_S) Nefry.sleep(0);
+    if (++sleepCnt >= SLEEP_CNT_S) {
+      NefryDisplay.clear();
+      NefryDisplay.setFont(ArialMT_Plain_24);
+      NefryDisplay.drawString(20, 20, "SLEEP....");
+      NefryDisplay.display();
+      Nefry.sleep(-1);
+    }
   });
 }
