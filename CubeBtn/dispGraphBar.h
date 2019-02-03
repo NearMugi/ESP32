@@ -82,7 +82,7 @@ class graph_bar {
           break;
 
         case BAR_SIDE:
-          NefryDisplay.drawVerticalLine(posX, posY, lenY);
+          //NefryDisplay.drawVerticalLine(posX, posY, lenY);
           //NefryDisplay.drawVerticalLine(posX + lenX, posY, lenY);
           //NefryDisplay.setFont(ArialMT_Plain_10);
           //NefryDisplay.drawString(posX + lenX + 2, 0, "Max");
@@ -150,7 +150,7 @@ class graph_bar {
 
             //値
             p = map(*(_g[_idx].v + valueSIZE - 1), valueMIN, valueMAX, 0, lenX);
-            NefryDisplay.fillRect(p-5, posY + ofs, p+5, 10);
+            NefryDisplay.fillRect(posX + p, posY, 5, 10);
             break;
         }
       }

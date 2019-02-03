@@ -99,7 +99,7 @@ String MsgPublishData;
 int graph_bar::valueSIZE;
 
 //棒グラフ(横方向)の領域
-#define GRAPH_BARS_POS_X 75
+#define GRAPH_BARS_POS_X 80
 #define GRAPH_BARS_POS_Y 54
 #define GRAPH_BARS_LEN_X 40
 #define GRAPH_BARS_LEN_Y 10
@@ -296,12 +296,36 @@ void loopDisplay() {
   //描画
   NefryDisplay.clear();
 
+  //ユーザー向けの情報
+  NefryDisplay.setFont(ArialMT_Plain_16);
+  if (nowStatus == STATUS_NONE) {
+  }
+  if (nowStatus == STATUS_TAIKI) {
+    NefryDisplay.drawRect(10, 10, 10, 10);
+    NefryDisplay.drawRect(22, 10, 10, 10);
+    NefryDisplay.drawRect(34, 10, 10, 10);
+    NefryDisplay.drawRect(46, 10, 10, 10);
+    NefryDisplay.drawRect(58, 10, 10, 10);
+    NefryDisplay.drawRect(70, 10, 10, 10);
+
+    if (jikiPtn >= 1 && jikiPtn <= 6) {
+      NefryDisplay.fillRect(10 * jikiPtn + 2 * (jikiPtn - 1), 10, 10, 10);
+    }
+
+
+  }
+  if (nowStatus == STATUS_BTN_ON) {
+  }
+  if (nowStatus == STATUS_MQTT_SUC) {
+  }
+
+  //デバッグ用
   NefryDisplay.setFont(ArialMT_Plain_10);
   NefryDisplay.drawString(0, 54, String(jikiPtn));
   NefryDisplay.drawString(7, 54, nowStatus);
   NefryDisplay.drawString(0, 44, ipStr);
   NefryDisplay.drawString(60, 44, MsgMqtt);
-  NefryDisplay.drawString(68, 54, String(jikiAvg));
+  NefryDisplay.drawString(60, 54, String(jikiAvg));
 
   //グラフの描画
   dispGraphBarS_update();
