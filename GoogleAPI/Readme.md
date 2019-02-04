@@ -7,6 +7,10 @@
         <td>値</td>
     </tr>
     <tr>
+        <td>4</td>
+        <td>バケット名</td>
+    </tr>
+    <tr>
         <td>5</td>
         <td>リフレッシュトークン</td>
     </tr>
@@ -20,7 +24,7 @@
     </tr>
     <tr>
         <td>8</td>
-        <td>親フォルダID</td>
+        <td>GoogleDriveのとき親フォルダID・Storageのときフォルダ名</td>
     </tr>
 </table>
   
@@ -28,6 +32,7 @@
 ### bool InitAPI()  
 * 初期設定  
 * DataStoreの設定、アクセストークンの取得、リクエストするときのヘッダーの設定
+* エラーの場合Falseを返す。
   
   
 ### String GetAccessToken(String refresh_token, String client_id, String client_secret)  
@@ -39,6 +44,10 @@
 * テキストファイルをGoogleDriveにアップロードする
 * 引数は　ファイル名、テキストデータ、コメント(ファイルの簡単な説明)
   
+### void postStorage_Text(String _fileName, String _textData)  
+* テキストファイルをGCPのStorageにアップロードする
+* 引数は　ファイル名、テキストデータ
+
 ### リクエスト時に使う設定を取得する関数  
 #### String getPostHeader(uint32_t len) : ヘッダー　POSTするデータサイズを指定  
 #### String getStartRequest_Text(String _fileName, String _comment) : テキストをPOSTするときのリクエスト(開始部分)  
@@ -85,3 +94,31 @@ Content-Type: text/plain
 1. リクエストの終了部分を送信する(client.print)  
   
 ※データの中身を送信するところが厄介。  膨大なデータ量(Jpegデータだと10万バイト以上ある)の場合、変数に保存できないので小分けにして取得→送信を繰り返す。  
+
+### GCP Storageにポストするときの形式
+POSTするURLが違うだけ。
+```
+POST /upload/storage/v1/b/myBucket/o?uploadType=multipart HTTP/1.1
+Host: www.googleapis.com:443
+Connection: close
+Authorization: Bearer [YOUR_AUTH_TOKEN]
+Content-Type: multipart/related; boundary=foo_bar_baz
+Content-Length: [NUMBER_OF_BYTES_IN_ENTIRE_REQUEST_BODY]
+
+
+--foo_bar_baz
+Content-Type: application/json; charset=UTF-8
+
+
+{
+  "name": "myObject"
+}
+
+
+--foo_bar_baz
+Content-Type: image/jpeg
+
+
+[JPEG_DATA]
+--foo_bar_baz--
+```
