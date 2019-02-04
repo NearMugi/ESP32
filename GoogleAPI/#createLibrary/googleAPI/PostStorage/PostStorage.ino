@@ -21,7 +21,7 @@ bool isInitAPI;
 #define JST     3600*9
 
 void setup() {
-  Nefry.setProgramName("Post GoogleDrive");
+  Nefry.setProgramName("Post GCP Storage ");
 
   NefryDisplay.begin();
   NefryDisplay.setAutoScrollFlg(true);//自動スクロールを有効
@@ -55,7 +55,7 @@ void setup() {
 
 void loop() {
   if (!isInitAPI) return;
-  
+
   if (Nefry.readSW()) {
 
     //日付を取得する
@@ -65,7 +65,9 @@ void loop() {
     char _fn[20] = "";
     sprintf(_fn, "%04d%02d%02d_%02d%02d%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 
-    String fn = String(_fn);
+    String fn = "";
+    if(api.parentFolder.length() > 0) fn += api.parentFolder + "/";
+    fn += String(_fn);
     String txtData = "HOGEhoge";
     String comment = "From NefryBT";
 
@@ -79,7 +81,7 @@ void loop() {
     NefryDisplay.drawString(50, 20, comment);
     NefryDisplay.display();
 
-    String msg = api.postDrive_Text(fn, txtData, comment);
+    String msg = api.postStorage_Text(fn, txtData, comment);
 
     NefryDisplay.drawString(0, 30, msg);
     NefryDisplay.display();
