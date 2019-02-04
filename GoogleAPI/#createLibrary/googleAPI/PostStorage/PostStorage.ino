@@ -69,7 +69,6 @@ void loop() {
     if(api.parentFolder.length() > 0) fn += api.parentFolder + "/";
     fn += String(_fn);
     String txtData = "HOGEhoge";
-    String comment = "From NefryBT";
 
     NefryDisplay.clear();
     NefryDisplay.setFont(ArialMT_Plain_10);
@@ -77,11 +76,9 @@ void loop() {
     NefryDisplay.drawString(20, 0, fn);
     NefryDisplay.drawString(0, 10, F("Data:"));
     NefryDisplay.drawString(30, 10, txtData);
-    NefryDisplay.drawString(0, 20, F("Comment:"));
-    NefryDisplay.drawString(50, 20, comment);
     NefryDisplay.display();
 
-    String msg = api.postStorage_Text(fn, txtData, comment);
+    String msg = api.postStorage_Text(fn, txtData);
 
     NefryDisplay.drawString(0, 30, msg);
     NefryDisplay.display();

@@ -180,8 +180,8 @@ class googleAPI {
     }
 
     //テキストファイルをGCP Storageにアップロードする
-    String postStorage_Text(String _fileName, String _textData,  String _comment) {
-      return postText(_fileName, _textData, _comment, postHeader_base_storage);
+    String postStorage_Text(String _fileName, String _textData) {
+      return postText(_fileName, _textData, "", postHeader_base_storage);
     }
 
   private:
