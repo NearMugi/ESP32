@@ -312,31 +312,33 @@ void loopDisplay() {
     MqttCnt = 0;
 
     //選択中の番号
-    NefryDisplay.drawRect(10, 10, 10, 10);
-    NefryDisplay.drawRect(22, 10, 10, 10);
-    NefryDisplay.drawRect(34, 10, 10, 10);
-    NefryDisplay.drawRect(46, 10, 10, 10);
-    NefryDisplay.drawRect(58, 10, 10, 10);
-    NefryDisplay.drawRect(70, 10, 10, 10);
+    int _ofs = 2;
+    int _lenPtn = 19;
+    for (int i = 0; i < 6; i++) {
+      NefryDisplay.drawRect(2 + (_lenPtn + _ofs) * i , 2, _lenPtn, _lenPtn);
+    }
     if (jikiPtn >= 1 && jikiPtn <= 6) {
-      NefryDisplay.fillRect(10 * jikiPtn + 2 * (jikiPtn - 1), 10, 10, 10);
+      NefryDisplay.fillRect(2 + (_lenPtn + _ofs) * jikiPtn , 2, _lenPtn, _lenPtn);
     }
 
     //ボタンを押すアニメーション
-    NefryDisplay.setFont(ArialMT_Plain_16);
-    NefryDisplay.drawString(10, 30, "(`･ω･´)");
-    NefryDisplay.fillRect(70, 40, 20, 5);
+    int _ofsBtnAni = 25;
+    NefryDisplay.drawCircle(5, _ofsBtnAni + 5, 3);
+    NefryDisplay.drawCircle(25, _ofsBtnAni + 5, 3);
+    NefryDisplay.drawRect(12, _ofsBtnAni + 10, 6, 4);
+    
+    NefryDisplay.fillRect(70, _ofsBtnAni + 6, 56, 10);
     if (nowStatus == STATUS_TAIKI) {
       if (jikiPtn >= 1 && jikiPtn <= 6) {
-        NefryDisplay.drawString(60, 30, "ﾉｼ");
-        NefryDisplay.drawRect(75, 30 + (BtnAniCnt / 2), 10, 10);
+        NefryDisplay.drawLine(30, _ofsBtnAni + 15, 40, _ofsBtnAni + (BtnAniCnt / 2));
+        NefryDisplay.drawRect(84, _ofsBtnAni + (BtnAniCnt / 2), 28, 6);
       } else {
-        NefryDisplay.drawRect(75, 30, 10, 10);
+        NefryDisplay.drawRect(84, _ofsBtnAni, 28, 6);
       }
     } else {
-      NefryDisplay.drawString(60, 30, " ｼ");
-      NefryDisplay.fillRect(70, 40, 20, 5);
-      NefryDisplay.drawRect(75, 35, 10, 10);
+      //ボタンを押した
+      NefryDisplay.drawLine(30, _ofsBtnAni + 15, 40, _ofsBtnAni + 5);
+      NefryDisplay.drawRect(84, _ofsBtnAni + 5, 28, 6);
     }
   }
 
@@ -360,12 +362,13 @@ void loopDisplay() {
   }
 
   //デバッグ用
+  int _ofsDebug = 44;
   NefryDisplay.setFont(ArialMT_Plain_10);
-  NefryDisplay.drawString(0, 54, String(jikiPtn));
-  NefryDisplay.drawString(7, 54, nowStatus);
-  NefryDisplay.drawString(0, 44, ipStr);
-  NefryDisplay.drawString(60, 44, MsgMqtt);
-  NefryDisplay.drawString(60, 54, String(jikiAvg));
+  NefryDisplay.drawString(0, _ofsDebug, ipStr);
+  NefryDisplay.drawString(60, _ofsDebug, MsgMqtt);
+  NefryDisplay.drawString(0, _ofsDebug + 10, String(jikiPtn));
+  NefryDisplay.drawString(7, _ofsDebug + 10, nowStatus);
+  NefryDisplay.drawString(60, _ofsDebug + 10, String(jikiAvg));
 
   //グラフの描画
   dispGraphBarS_update();
