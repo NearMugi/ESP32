@@ -457,7 +457,9 @@ void loop() {
     if (++sleepCnt >= SLEEP_CNT_S) {
       NefryDisplay.clear();
       NefryDisplay.setFont(ArialMT_Plain_24);
-      NefryDisplay.drawString(20, 20, "SLEEP....");
+      NefryDisplay.drawString(20, 5, "SLEEP....");
+      NefryDisplay.setFont(ArialMT_Plain_10);
+      NefryDisplay.drawString(20, 55, "...Please push RESET BTN");
       NefryDisplay.display();
       Nefry.sleep(-1);
     }
