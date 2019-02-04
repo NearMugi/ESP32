@@ -90,6 +90,8 @@ int btnCnt = 0;
 String ipStr;
 String MsgMqtt;
 String MsgPublishData;
+int BtnAniCnt;
+int MqttCnt;
 
 //++++++++++++++++++++++++++++++++++++++++++++
 //折れ線グラフ
@@ -274,6 +276,8 @@ void setup() {
 
   //グラフ
   dispGraphBarS_init();
+  BtnAniCnt = 0;
+  MqttCnt = 0;
 
   //スリープ
   sleepCnt = 0;
@@ -297,26 +301,62 @@ void loopDisplay() {
   NefryDisplay.clear();
 
   //ユーザー向けの情報
-  NefryDisplay.setFont(ArialMT_Plain_16);
+  if (++BtnAniCnt > 10) BtnAniCnt = 0;
   if (nowStatus == STATUS_NONE) {
+    //何もなし
   }
-  if (nowStatus == STATUS_TAIKI) {
+
+  //キューブを置いている段階 or ボタンを押したとき
+  if (nowStatus == STATUS_TAIKI || nowStatus == STATUS_BTN_ON) {
+    //次のMQTT送信向けに変数を初期化しておく
+    MqttCnt = 0;
+
+    //選択中の番号
     NefryDisplay.drawRect(10, 10, 10, 10);
     NefryDisplay.drawRect(22, 10, 10, 10);
     NefryDisplay.drawRect(34, 10, 10, 10);
     NefryDisplay.drawRect(46, 10, 10, 10);
     NefryDisplay.drawRect(58, 10, 10, 10);
     NefryDisplay.drawRect(70, 10, 10, 10);
-
     if (jikiPtn >= 1 && jikiPtn <= 6) {
       NefryDisplay.fillRect(10 * jikiPtn + 2 * (jikiPtn - 1), 10, 10, 10);
     }
 
+    //ボタンを押すアニメーション
+    NefryDisplay.setFont(ArialMT_Plain_16);
+    NefryDisplay.drawString(10, 30, "(`･ω･´)");
+    NefryDisplay.fillRect(70, 40, 20, 5);
+    if (nowStatus == STATUS_TAIKI) {
+      if (jikiPtn >= 1 && jikiPtn <= 6) {
+        NefryDisplay.drawString(60, 30, "ﾉｼ");
+        NefryDisplay.drawRect(75, 30 + (BtnAniCnt / 2), 10, 10);
+      } else {
+        NefryDisplay.drawRect(75, 30, 10, 10);
+      }
+    } else {
+      NefryDisplay.drawString(60, 30, " ｼ");
+      NefryDisplay.fillRect(70, 40, 20, 5);
+      NefryDisplay.drawRect(75, 35, 10, 10);
+    }
+  }
 
-  }
-  if (nowStatus == STATUS_BTN_ON) {
-  }
+  //MQTTにパブリッシュ中
   if (nowStatus == STATUS_MQTT_SUC) {
+    //Btn
+    NefryDisplay.fillRect(10, 40, 20, 5);
+    NefryDisplay.drawRect(15, 35, 10, 10);
+
+    //GoogleHomeMini
+    NefryDisplay.drawCircle(90, 22, 15);
+    NefryDisplay.drawCircle(80, 22, 2);
+    NefryDisplay.drawCircle(85, 22, 2);
+    NefryDisplay.drawCircle(85, 22, 2);
+    NefryDisplay.drawCircle(100, 22, 2);
+
+    //通信
+    if (++MqttCnt > 50) MqttCnt = 0;
+    NefryDisplay.setFont(ArialMT_Plain_16);
+    NefryDisplay.drawString(20 + MqttCnt, 22, ")))");
   }
 
   //デバッグ用
