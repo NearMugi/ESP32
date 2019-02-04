@@ -26,7 +26,7 @@ NefrySetting nefrySetting(setting);
 #include "interval.h"
 #define LOOPTIME_DISP  100000
 #define LOOPTIME_JIKI  30000
-#define LOOPTIME_BTN   30000
+#define LOOPTIME_BTN   50000
 #define LOOPTIME_MQTT  500000
 #define LOOPTIME_SLEEP_CNT  1000000
 
@@ -154,6 +154,8 @@ char topic_user[64];
 char topic_food[64];
 WiFiClient espClient;
 PubSubClient client(espClient);
+bool isInitMqtt;
+
 
 //connect mqtt broker
 void reconnect() {
@@ -270,6 +272,13 @@ void setup() {
   sprintf(topic_user, "%s/%s", Channel, ResUser);
   sprintf(topic_food, "%s/%s", Channel, ResFood);
   Nefry.setStoreTitle("Token_CubeButton", NEFRY_DATASTORE_BEEBOTTE_CUBEBTN);
+  String _tmp = Nefry.getStoreStr(NEFRY_DATASTORE_BEEBOTTE_CUBEBTN);
+  isInitMqtt = false;
+  MsgMqtt = "MQTT INIT NG";
+  if (_tmp.length() > 0) {
+    isInitMqtt = true;
+    MsgMqtt = "";
+  }
 
   //date
   configTime( JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
@@ -315,30 +324,34 @@ void loopDisplay() {
     int _ofs = 2;
     int _lenPtn = 19;
     for (int i = 0; i < 6; i++) {
-      NefryDisplay.drawRect(2 + (_lenPtn + _ofs) * i , 2, _lenPtn, _lenPtn);
-    }
-    if (jikiPtn >= 1 && jikiPtn <= 6) {
-      NefryDisplay.fillRect(2 + (_lenPtn + _ofs) * jikiPtn , 2, _lenPtn, _lenPtn);
+      if (i == jikiPtn - 1) {
+        NefryDisplay.drawRect(2 + (_lenPtn + _ofs) * i , 2, _lenPtn, _lenPtn);
+        NefryDisplay.setFont(ArialMT_Plain_16);
+        NefryDisplay.drawString(2 + (_lenPtn + _ofs) * i + 4 , 2, String(i+1));
+      } else {
+        NefryDisplay.fillRect(2 + (_lenPtn + _ofs) * i , 2, _lenPtn, _lenPtn);
+      }
+
     }
 
     //ボタンを押すアニメーション
     int _ofsBtnAni = 25;
-    NefryDisplay.drawCircle(5, _ofsBtnAni + 5, 3);
-    NefryDisplay.drawCircle(25, _ofsBtnAni + 5, 3);
-    NefryDisplay.drawRect(12, _ofsBtnAni + 10, 6, 4);
-    
-    NefryDisplay.fillRect(70, _ofsBtnAni + 6, 56, 10);
+    NefryDisplay.drawCircle(15, _ofsBtnAni + 5, 3);
+    NefryDisplay.drawCircle(35, _ofsBtnAni + 5, 3);
+    NefryDisplay.drawRect(22, _ofsBtnAni + 10, 6, 4);
+
+    NefryDisplay.fillRect(70, _ofsBtnAni + 8, 28, 8);
     if (nowStatus == STATUS_TAIKI) {
       if (jikiPtn >= 1 && jikiPtn <= 6) {
-        NefryDisplay.drawLine(30, _ofsBtnAni + 15, 40, _ofsBtnAni + (BtnAniCnt / 2));
-        NefryDisplay.drawRect(84, _ofsBtnAni + (BtnAniCnt / 2), 28, 6);
+        NefryDisplay.drawLine(40, _ofsBtnAni + 15, 50, _ofsBtnAni + (BtnAniCnt / 2));
+        NefryDisplay.drawRect(76, _ofsBtnAni + (BtnAniCnt / 2), 16, 9);
       } else {
-        NefryDisplay.drawRect(84, _ofsBtnAni, 28, 6);
+        NefryDisplay.drawRect(76, _ofsBtnAni, 16, 9);
       }
     } else {
       //ボタンを押した
-      NefryDisplay.drawLine(30, _ofsBtnAni + 15, 40, _ofsBtnAni + 5);
-      NefryDisplay.drawRect(84, _ofsBtnAni + 5, 28, 6);
+      NefryDisplay.drawLine(40, _ofsBtnAni + 15, 50, _ofsBtnAni + 5);
+      NefryDisplay.drawRect(76, _ofsBtnAni + 5, 16, 9);
     }
   }
 
@@ -463,6 +476,9 @@ void loopBtn() {
 
 
 void loopMQTT() {
+
+  if (!isInitMqtt) return;
+  if (!client.connected()) reconnect();
   //送信中の待ち
   if (nowStatus == STATUS_MQTT_SUC) {
     unsigned long _t = millis();
@@ -520,7 +536,6 @@ void loop() {
 
   //MQTT publish
   interval<LOOPTIME_MQTT>::run([] {
-    if (!client.connected()) reconnect();
     loopMQTT();
   });
 
