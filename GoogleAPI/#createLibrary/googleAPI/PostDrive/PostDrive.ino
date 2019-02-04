@@ -8,6 +8,7 @@ NefrySetting nefrySetting(setting);
 
 #include "googleAPI.h"
 googleAPI api;
+bool isInitAPI;
 // Data Store
 // 4:Storage Bucket
 // 5:Refresh Token
@@ -37,10 +38,15 @@ void setup() {
   NefryDisplay.drawString(0, 10, F("Init API Setting..."));
   NefryDisplay.display();
 
-  api.InitAPI();
+  isInitAPI = api.InitAPI();
 
-  NefryDisplay.drawString(0, 20, F("Success in Setting!"));
-  NefryDisplay.drawString(0, 30, F("Waiting Push Btn..."));
+  if (isInitAPI) {
+    NefryDisplay.drawString(0, 20, F("Success in Setting!"));
+    NefryDisplay.drawString(0, 30, F("Waiting Push Btn..."));
+
+  } else {
+    NefryDisplay.drawString(0, 20, F("Fail in Setting..."));
+  }
   NefryDisplay.display();
   Nefry.ndelay(10);
 
@@ -48,6 +54,8 @@ void setup() {
 }
 
 void loop() {
+  if (!isInitAPI) return;
+  
   if (Nefry.readSW()) {
 
     //日付を取得する
