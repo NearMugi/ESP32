@@ -17,6 +17,9 @@ googleAPI api;
 // 7:Client Secret
 // 8:Parent Folder
 
+//true : DriveにPOST false : StorageにPOST
+#define POST_DRIVE true
+
 //date
 #include <time.h>
 #define JST     3600*9
@@ -116,11 +119,12 @@ void ArduCAM_Capture(String fn, String comment) {
   full_length = start_request.length() + ReadSize + end_request.length();
 
   //Drive or GCP Storage
-#if true  
-  String postHeader = api.getPostHeader(api.postHeader_base_drive, full_length);
-#else
-  String postHeader = api.getPostHeader(api.postHeader_base_storage, full_length);
-#endif
+  String postHeader = "";
+  if (POST_DRIVE) {
+    postHeader = api.getPostHeader(api.postHeader_base_drive, full_length);
+  } else {
+    postHeader = api.getPostHeader(api.postHeader_base_storage, full_length);
+  }
 
   String result = "";
 
@@ -205,7 +209,7 @@ void ArduCAM_Capture(String fn, String comment) {
   msg += ReadSize;
   //SetDebugMsg(msg, 40);
   Serial.println(msg);
-  
+
   client.println(end_request);
   //バッファーメモリサイズと画像サイズが異なるため、full_lengthに達していない。
   //足りない分の帳尻を合わせる
@@ -292,7 +296,13 @@ void loop() {
     char _fn[20] = "";
     sprintf(_fn, "%04d%02d%02d_%02d%02d%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 
-    String fn = String(_fn);
+    String fn = "";
+    //StorageにPOSTするときはフォルダ名も含める
+    if(!POST_DRIVE){
+      if(api.parentFolder.length() > 0) fn += api.parentFolder + "/";
+    }
+    fn += String(_fn);
+    
     String comment = "From ArduCam";
 
     ArduCAM_Capture(fn, comment);
