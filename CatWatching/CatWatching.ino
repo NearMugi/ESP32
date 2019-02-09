@@ -301,8 +301,11 @@ void setup() {
     //StorageにPOSTするときはフォルダ名も含める
     if (!POST_DRIVE) {
       if (api.parentFolder.length() > 0) fn += api.parentFolder + "/";
+      fn += String(_fn);
+      fn +=".jpeg";
+    } else {
+      fn += String(_fn);     
     }
-    fn += String(_fn);
 
     String comment = "From ArduCam";
 
