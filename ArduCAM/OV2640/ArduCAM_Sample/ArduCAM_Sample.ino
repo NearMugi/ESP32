@@ -18,7 +18,7 @@ googleAPI api;
 // 8:Parent Folder
 
 //true : DriveにPOST false : StorageにPOST
-#define POST_DRIVE true
+#define POST_DRIVE false
 
 //date
 #include <time.h>
