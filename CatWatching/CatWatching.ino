@@ -3,6 +3,8 @@
 #include <Wire.h>
 #include <WiFiClientSecure.h>
 #include <NefrySetting.h>
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
 void setting() {
   Nefry.disableDisplayStatus();
 }
@@ -34,6 +36,17 @@ int sleepTime;
 
 const int CS = D5;
 ArduCAM myCAM(OV2640, CS);
+
+//MQTT
+#define NEFRY_DATASTORE_BEEBOTTE 1
+#define BBT "mqtt.beebotte.com"
+#define QoS 2
+String bbt_token;
+#define Channel "CatImage"
+#define Res "fn"
+char topic[64];
+WiFiClient espClient;
+PubSubClient client(espClient);
 
 bool ArduCAM_Init() {
   Serial.println(F("Start Camera Setting"));
@@ -256,12 +269,13 @@ void SetDebugMsg(String msg, int pos) {
 
 void setup() {
   ofsTime = millis();
-  
+
   Nefry.setProgramName("Cat Watching");
 
   NefryDisplay.begin();
   NefryDisplay.setAutoScrollFlg(true);//自動スクロールを有効
-
+  Nefry.setStoreTitle("MQTT_Token", NEFRY_DATASTORE_BEEBOTTE); 
+  
   //date
   configTime( JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
 
@@ -302,26 +316,59 @@ void setup() {
     if (!POST_DRIVE) {
       if (api.parentFolder.length() > 0) fn += api.parentFolder + "/";
       fn += String(_fn);
-      fn +=".jpeg";
+      fn += ".jpeg";
     } else {
-      fn += String(_fn);     
+      fn += String(_fn);
     }
 
     String comment = "From ArduCam";
 
     ArduCAM_Capture(fn, comment);
+
+
+    //mqtt送信
+    client.setServer(BBT, 1883);
+    sprintf(topic, "%s/%s", Channel, Res);
+    
+
+    Serial.print("Attempting MQTT connection...");
+    // Create a random client ID
+    String clientId = "ESP32Client-";
+    clientId += String(random(0xffff), HEX);
+
+    //NefryのDataStoreに書き込んだToken(String)を(const char*)に変換
+    bbt_token = "token:";
+    bbt_token += Nefry.getStoreStr(NEFRY_DATASTORE_BEEBOTTE);
+    const char* tmp = bbt_token.c_str();
+    // Attempt to connect
+    if (client.connect(clientId.c_str(), tmp, "")) {
+      char buffer[128];
+      StaticJsonBuffer<128> jsonOutBuffer;
+      JsonObject& root = jsonOutBuffer.createObject();
+      root["fn"] = String(_fn);
+      root["ispublic"] = true;
+      root["ts"] = t;
+
+      // Now print the JSON into a char buffer
+      root.printTo(buffer, sizeof(buffer));
+
+      // Now publish the char buffer to Beebotte
+      client.publish(topic, buffer, QoS);
+    }
+
+
   }
 
 }
 void loop() {
-      ofsTime = millis() - ofsTime; //ms
-      sleepTime = 600 - (int)((float)ofsTime / 1000);//sec
-      String _tmp = String(sleepTime);
-      _tmp += "s";
-      NefryDisplay.clear();
-      NefryDisplay.setFont(ArialMT_Plain_24);
-      NefryDisplay.drawString(20, 5, "SLEEP....");
-      NefryDisplay.drawString(20, 35, _tmp);
-      NefryDisplay.display();
-      Nefry.sleep(sleepTime);
+  ofsTime = millis() - ofsTime; //ms
+  sleepTime = 600 - (int)((float)ofsTime / 1000);//sec
+  String _tmp = String(sleepTime);
+  _tmp += "s";
+  NefryDisplay.clear();
+  NefryDisplay.setFont(ArialMT_Plain_24);
+  NefryDisplay.drawString(20, 5, "SLEEP....");
+  NefryDisplay.drawString(20, 35, _tmp);
+  NefryDisplay.display();
+  Nefry.sleep(sleepTime);
 }
