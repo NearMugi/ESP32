@@ -7,36 +7,34 @@
 
 class googleCloudFunctions {
   public:
-    const char* host;
-    const int httpsPort = 443;
     String basePostHeader;
-    
+
     void InitAPI() {
       Nefry.setStoreTitleStr("GCP Project", NEFRY_GCP_PROJECT);
-      String _tmp = Nefry.getStoreStr(NEFRY_GCP_PROJECT) + ".cloudfunctions.net";
-      char* _tmpC;
-      _tmp.toCharArray(_tmpC, _tmp.length() + 1);
-      host = (const char*)_tmpC;
-      
       //リクエストするときのヘッダーを設定する
       basePostHeader = "";
       basePostHeader += ("POST @function HTTP/1.1\r\n");
-      basePostHeader += ("Host: " + String(host) + ":" + String(httpsPort) + "\r\n");
+      basePostHeader += ("Host: @host:@httpsPort\r\n");
       basePostHeader += ("Connection: close\r\n");
-      basePostHeader += ("Content-Type: application/json");
+      basePostHeader += ("Content-Type: application/json;charset=utf-8\r\n");
     }
-    
+
     //RuntimeConfigからデータを取得する
     String getRuntimeConfig(String _configName) {
+      String _tmp = Nefry.getStoreStr(NEFRY_GCP_PROJECT);
+      const char* host = _tmp.c_str();
+      const int httpsPort = 443;
       String function = "/GetRuntimeConfig";
-      
       String postData = "";
-      postData += "{""list"" : [""" + _configName + """]}";
+      postData += "{\"list\" : [\"" + _configName + "\"]}";
 
       String postHeader = basePostHeader;
       postHeader.replace("@function", function);
-      
-      String ret = postRequest(host, postHeader, postData);
+      postHeader.replace("@host", String(host));
+      postHeader.replace("@httpsPort", String(httpsPort));
+      postHeader = postHeader + "Content-Length: " + postData.length() + "\r\n" + "\r\n" + postData + "\r\n";
+
+      String ret = postRequest(host, httpsPort, postHeader);
       Serial.println(ret);
       return "";
     }
@@ -44,7 +42,7 @@ class googleCloudFunctions {
 
   private:
     //サーバーにデータをポストする
-    String postRequest(const char* server, String header, String data) {
+    String postRequest(const char* server, int port, String header) {
 
       String result = "";
 
@@ -52,14 +50,15 @@ class googleCloudFunctions {
       WiFiClientSecure client;
       Serial.print("Connecting to: "); Serial.println(server);
 
-      if (!client.connect(server, httpsPort)) {
+      if (!client.connect(server, port)) {
         Serial.println("connection failed");
         return result;
       }
       Serial.println("certificate matches");
 
-      Serial.print("post: "); Serial.println(header + data);
-      client.print(header + data);
+      Serial.println("[post]"); 
+      Serial.println(header);
+      client.print(header);
 
       Serial.println("Receiving response");
       if (client.connected()) {
