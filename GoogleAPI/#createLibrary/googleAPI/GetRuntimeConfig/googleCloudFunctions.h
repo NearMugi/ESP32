@@ -21,12 +21,18 @@ class googleCloudFunctions {
 
     //RuntimeConfigからデータを取得する
     String getRuntimeConfig(String _configName) {
+      String postData = "{\"list\" : [\"" + _configName + "\"]}";
+      String ret = callCloudFunctions("GetRuntimeConfig", postData);
+      Serial.println(ret);
+      return "";
+    }
+
+    String callCloudFunctions(String _funcName, String _postData){
       String _tmp = Nefry.getStoreStr(NEFRY_GCP_PROJECT);
       const char* host = _tmp.c_str();
       const int httpsPort = 443;
-      String function = "/GetRuntimeConfig";
-      String postData = "";
-      postData += "{\"list\" : [\"" + _configName + "\"]}";
+      String function = "/" + _funcName;
+      String postData = _postData;
 
       String postHeader = basePostHeader;
       postHeader.replace("@function", function);
@@ -36,10 +42,10 @@ class googleCloudFunctions {
 
       String ret = postRequest(host, httpsPort, postHeader);
       Serial.println(ret);
-      return "";
+      return "";      
     }
-
-
+    
+    
   private:
     //サーバーにデータをポストする
     String postRequest(const char* server, int port, String header) {
