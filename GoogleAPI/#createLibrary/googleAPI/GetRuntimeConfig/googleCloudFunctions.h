@@ -22,12 +22,11 @@ class googleCloudFunctions {
     //RuntimeConfigからデータを取得する
     String getRuntimeConfig(String _configName) {
       String postData = "{\"list\" : [\"" + _configName + "\"]}";
-      String ret = callCloudFunctions("GetRuntimeConfig", postData);
-      Serial.println(ret);
-      return "";
+      return callCloudFunctions("GetRuntimeConfig", postData);
     }
 
-    String callCloudFunctions(String _funcName, String _postData){
+    //関数名とPOSTリクエストを指定して実行、レスポンスを返す
+    String callCloudFunctions(String _funcName, String _postData) {
       String _tmp = Nefry.getStoreStr(NEFRY_GCP_PROJECT);
       const char* host = _tmp.c_str();
       const int httpsPort = 443;
@@ -41,11 +40,20 @@ class googleCloudFunctions {
       postHeader = postHeader + "Content-Length: " + postData.length() + "\r\n" + "\r\n" + postData + "\r\n";
 
       String ret = postRequest(host, httpsPort, postHeader);
-      Serial.println(ret);
-      return "";      
+      return ret;
     }
-    
-    
+
+    //jsonデータから欲しい情報を取得する
+    String getJsonValue(String _target, String _member) {
+      const int BUFFER_SIZE = JSON_OBJECT_SIZE(4) + JSON_ARRAY_SIZE(1);
+      StaticJsonBuffer<BUFFER_SIZE> jsonBuffer;
+      char json[_target.length() + 1];
+      _target.toCharArray(json, sizeof(json));
+      JsonObject& root = jsonBuffer.parseObject(json);
+      const char* ret = root[_member];
+      return ret;
+    }
+
   private:
     //サーバーにデータをポストする
     String postRequest(const char* server, int port, String header) {
@@ -62,7 +70,7 @@ class googleCloudFunctions {
       }
       Serial.println("certificate matches");
 
-      Serial.println("[post]"); 
+      Serial.println("[post]");
       Serial.println(header);
       client.print(header);
 
