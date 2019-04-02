@@ -40,17 +40,27 @@ class googleCloudFunctions {
       postHeader = postHeader + "Content-Length: " + postData.length() + "\r\n" + "\r\n" + postData + "\r\n";
 
       String ret = postRequest(host, httpsPort, postHeader);
+      //最初と最後の"[]"を外す
+      ret.setCharAt(0, ' ');
+      ret.setCharAt(ret.length() - 1, ' ');
+      ret.trim();
       return ret;
     }
 
     //jsonデータから欲しい情報を取得する
     String getJsonValue(String _target, String _member) {
-      const int BUFFER_SIZE = JSON_OBJECT_SIZE(4) + JSON_ARRAY_SIZE(1);
-      StaticJsonBuffer<BUFFER_SIZE> jsonBuffer;
+      StaticJsonDocument<700> doc;
       char json[_target.length() + 1];
-      _target.toCharArray(json, sizeof(json));
-      JsonObject& root = jsonBuffer.parseObject(json);
-      const char* ret = root[_member];
+      int size = sizeof(json);
+      _target.toCharArray(json, size);
+
+      DeserializationError error = deserializeJson(doc, json);
+      if (error) {
+        Serial.print(F("deserializeJson() failed: "));
+        Serial.println(error.c_str());
+        return "";
+      }
+      const char* ret = doc[_member];
       return ret;
     }
 
