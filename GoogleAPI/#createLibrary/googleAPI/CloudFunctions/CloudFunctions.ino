@@ -38,8 +38,18 @@ void setup() {
   postData += "}";
   Serial.println(postData);
 
-  ret = cfs.callCloudFunctions("GPSMap_getMapBinary", postData);
-  Serial.println(ret);
+  String retBytes = cfs.callCloudFunctions("GPSMap_getMapBinary", postData);
+  uint8_t imgBytes[retBytes.length() + 1];
+  retBytes.getBytes(imgBytes, sizeof(imgBytes));
+
+  Serial.print("retBytes Size: ");
+  Serial.println(retBytes.length());
+  Serial.print("imgBytes Size: ");
+  Serial.println(sizeof(imgBytes));
+  for(int i=0; i< sizeof(imgBytes)-1; i++){
+    Serial.print(String(imgBytes[i], HEX)); 
+    Serial.print(" "); 
+  }
 
 }
 
