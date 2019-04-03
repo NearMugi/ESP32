@@ -96,9 +96,12 @@ class googleCloudFunctions {
         if (client.find("\r\n\r\n")) {
           Serial.println(F("[Read Data]"));
         }
-        String line = client.readStringUntil('\r');
-        Serial.println(line);
-        result += line;
+        
+        result = "";
+        while (client.available()) {
+          result += client.readStringUntil('\r');
+        }
+        //Serial.println(result);
       }
 
       Serial.println("closing connection");
