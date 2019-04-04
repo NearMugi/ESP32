@@ -34,7 +34,7 @@ void setup()
   postData += "{\"key\" : \"" + GPSApiKey + "\",";
   postData += "\"axis\" : \"" + _axis + "\",";
   postData += "\"color\" : \"true\",";
-  postData += "\"trim\" : \"right\"";
+  postData += "\"trim\" : \"topright\"";
   postData += "}";
   Serial.println(postData);
 
@@ -48,8 +48,8 @@ void setup()
   Serial.println(sizeof(imgBytes));
   for (int i = 0; i < sizeof(imgBytes) - 1; i++)
   {
-    Serial.print(String(imgBytes[i], HEX));
-    Serial.print(" ");
+    //Serial.print(String(imgBytes[i], HEX));
+    //Serial.print(" ");
   }
 }
 

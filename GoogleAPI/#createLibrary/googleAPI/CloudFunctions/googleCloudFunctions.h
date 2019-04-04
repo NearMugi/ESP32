@@ -83,8 +83,8 @@ class googleCloudFunctions {
       Serial.println("[post]");
       Serial.println(header);
       client.print(header);
+      delay(10);
 
-      Serial.println("Receiving response");
       if (client.connected()) {
         if (client.find("HTTP/1.1 ")) {
           String status_code = client.readStringUntil('\r');
@@ -100,11 +100,11 @@ class googleCloudFunctions {
         result = "";
         while (client.available()) {
           result += client.readStringUntil('\r');
-          Serial.println(result.length());
         }
-        //Serial.println(result);
       }
 
+      Serial.print("ReceiveData Size:");Serial.println(result.length());
+      Serial.println(result);
       Serial.println("closing connection");
       return result;
     }
