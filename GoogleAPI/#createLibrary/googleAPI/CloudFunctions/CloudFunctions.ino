@@ -42,8 +42,6 @@ void setup()
   uint8_t imgBytes[retBytes.length() + 1];
   retBytes.getBytes(imgBytes, sizeof(imgBytes));
 
-  delay(1000);
-
   Serial.print("retBytes Size: ");
   Serial.println(retBytes.length());
   Serial.print("imgBytes Size: ");
