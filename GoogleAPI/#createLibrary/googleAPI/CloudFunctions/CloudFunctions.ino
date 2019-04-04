@@ -14,11 +14,10 @@
 #include "googleCloudFunctions.h"
 googleCloudFunctions cfs;
 
-
 #include <ArduinoJson.h>
 
-
-void setup() {
+void setup()
+{
   cfs.InitAPI();
 
   //RuntimeConfigのデータを取得する
@@ -27,14 +26,15 @@ void setup() {
 
   //取得したjsonデータから欲しい情報を取得する
   String GPSApiKey = cfs.getJsonValue(ret, "GPSApiKey");
-  
+
   //GPSMap_getMapBinaryを使う
   Serial.println("\n++++++++++++++++++++++\n[GPSMap_getMapBinary]\n++++++++++++++++++++++\n");
   String _axis = "35.68035,139.7673229";
   String postData = "";
   postData += "{\"key\" : \"" + GPSApiKey + "\",";
   postData += "\"axis\" : \"" + _axis + "\",";
-  postData += "\"color\" : \"true\"";
+  postData += "\"color\" : \"true\",";
+  postData += "\"trim\" : \"right\"";
   postData += "}";
   Serial.println(postData);
 
@@ -48,12 +48,13 @@ void setup() {
   Serial.println(retBytes.length());
   Serial.print("imgBytes Size: ");
   Serial.println(sizeof(imgBytes));
-  for(int i=0; i< sizeof(imgBytes)-1; i++){
-    Serial.print(String(imgBytes[i], HEX)); 
-    Serial.print(" "); 
+  for (int i = 0; i < sizeof(imgBytes) - 1; i++)
+  {
+    Serial.print(String(imgBytes[i], HEX));
+    Serial.print(" ");
   }
-
 }
 
-void loop() {
+void loop()
+{
 }
