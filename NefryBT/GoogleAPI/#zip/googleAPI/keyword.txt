@@ -3,6 +3,7 @@
 #######################################
 
 googleAPI	KEYWORD1
+googleCloudFunctions	KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)
@@ -15,3 +16,9 @@ getEndRequest	KEYWORD2
 InitAPI	KEYWORD2
 GetAccessToken	KEYWORD2
 postDrive_Text	KEYWORD2
+
+InitAPI	KEYWORD2
+callCloudFunctions_String	KEYWORD2
+callCloudFunctions_Json	KEYWORD2
+getRuntimeConfig	KEYWORD2
+getJsonValue	KEYWORD2
