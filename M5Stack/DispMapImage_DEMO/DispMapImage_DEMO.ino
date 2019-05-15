@@ -112,6 +112,11 @@ void callback(char *topic, byte *payload, unsigned int length)
 #ifdef DEBUG
   Serial.println(getAxis);
 #endif
+
+  //デモ用+++
+  getAxis = "35.6585733,139.7452599";
+  isGet = true;
+  //++++++++
 }
 
 void dispImage()
@@ -243,10 +248,6 @@ void loop()
   interval<1000000>::run([] {
     if (isGet)
     {
-
-      //デモ用
-      getAxis = "35.6585733,139.7452599";
-
       M5.Lcd.fillScreen(BLACK); // CLEAR SCREEN
       M5.Lcd.setCursor(50, 120);
       M5.Lcd.setTextSize(3);
