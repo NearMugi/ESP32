@@ -11,16 +11,25 @@ NefrySetting nefrySetting(setting);
 //ループ周期(us)
 #include "interval.h"
 #define LOOPTIME_GRAPH 10000
-#define LOOPTIME_PULSE_160 500000
+#define LOOPTIME_PULSE_160 1000000
+
+//debug
+unsigned long countTime;
+unsigned long lpTime;
+bool sw;
 
 //割り込み処理
 hw_timer_t *timer = NULL;
 volatile SemaphoreHandle_t timerSemaphore;
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
-#define InterruptTime 10
+#define InterruptTime 100
 
 volatile uint32_t isrCounter = 0;
 volatile uint32_t lastIsrAt = 0;
+
+//pulse
+#define PIN_PULSE D0
+float pulse160_interrupt = 3125;
 
 void IRAM_ATTR onTimer()
 {
@@ -37,7 +46,7 @@ void IRAM_ATTR onTimer()
 class haptic
 {
 public:
-    haptic(int p)
+    haptic(float p)
     {
         //1セット(On,Offを3回＋50msの待ち)
         pulse[0] = p;
@@ -45,7 +54,7 @@ public:
         pulse[2] = p;
         pulse[3] = p;
         pulse[4] = p;
-        pulse[5] = p + 50000;
+        pulse[5] = p + (50000 / (float)InterruptTime);
     }
     bool getisOn()
     {
@@ -58,42 +67,67 @@ public:
         return false;
     }
 
+    String debugMsg()
+    {
+        String s = "";
+        if (isOn)
+        {
+            s += "ON, ";
+        }
+        else
+        {
+            s += "OFF, ";
+        }
+
+        s += String(idx) + ", ";
+        s += String(remainTime);
+
+        return s;
+    }
     void start()
     {
+        isPlay = true;
         idx = 0;
         isOn = true;
         remainTime = pulse[idx];
     }
 
-    //1usごとに割込み処理で呼ばれる
+    //割込み処理で呼ばれる
     void countDown()
     {
+        if (!isPlay)
+            return;
+
         remainTime -= InterruptTime;
         if (remainTime < 0)
         {
-            if (++idx > 5)
+            if (++idx <= 5)
             {
                 remainTime = pulse[idx];
-                isOn != isOn;
+                isOn = !isOn;
             }
             else
             {
                 //1セット終了
-                remainTime = 0;
+                isPlay = false;
             }
         }
     }
 
 private:
+    volatile bool isPlay;
     volatile bool isOn;
-    volatile bool idx;
-    volatile int pulse[6];
+    volatile int idx;
+    volatile float pulse[6];
     volatile int remainTime;
 };
-haptic ptn160 = haptic(3125);
+
+haptic ptn160 = haptic(pulse160_interrupt);
 
 void setup()
 {
+    pinMode(PIN_PULSE, OUTPUT);
+
     Nefry.enableSW();
 
     NefryDisplay.begin();
@@ -119,26 +153,43 @@ void setup()
 
     // Start an alarm
     timerAlarmEnable(timer);
+
+    countTime = micros();
+    sw = false;
 }
 
 void loop()
 {
+#if false
+    lpTime = micros() - countTime;
+    countTime = micros();
+#endif
+
+#if false
+    //パルス(160Hz)
+    interval<LOOPTIME_PULSE_160>::run([] {
+        ptn160.start();
+    });
+
     //割り込み処理
     if (xSemaphoreTake(timerSemaphore, 0) == pdTRUE)
     {
         ptn160.countDown();
     }
 
-    //パルス(160Hz)
-    interval<LOOPTIME_PULSE_160>::run([] {
-        ptn160.start();
-    });
+    digitalWrite(PIN_PULSE, ptn160.getisOn());
+#endif
+    digitalWrite(PIN_PULSE, sw);
+    sw = !sw;
 
+#if false
     //データ・グラフ更新
     interval<LOOPTIME_GRAPH>::run([] {
         //描画する
         NefryDisplay.clear();
-        NefryDisplay.drawString(10, 10, String(ptn160.getisOn()));
+        NefryDisplay.drawString(10, 10, String(ptn160.debugMsg()));
+        NefryDisplay.drawString(10, 25, String(lpTime));
         NefryDisplay.display();
     });
+#endif
 }
