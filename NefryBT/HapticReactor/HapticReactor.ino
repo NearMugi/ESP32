@@ -19,24 +19,51 @@ bool isActive;
 
 //ループ周期(us)
 #include "interval.h"
-#define LOOPTIME_PULSE_160 200000
+#define LOOPTIME_PULSE 10000
+#define LOOPTIME_DISP 10000
+#define LOOPTIME_PLAY 2000000
+
+//debug
+int cnt = 1; //ループ回数
 
 class haptic
 {
 public:
-    haptic(int no)
+    int wavNo;
+    int lpCnt;
+    haptic()
     {
-        wavNo = no;
+        wavNo = 1;
+        lpCnt = 0;
     }
-    void play()
+    void play(int lp)
     {
+        lpCnt = lp;
         myDFPlayer.play(wavNo);
     }
+    void update()
+    {
+        if (lpCnt <= 0)
+            return;
 
-private:
-    int wavNo;
+        if (!myDFPlayer.available())
+            return;
+
+        //再生中なら何もしない
+        if (myDFPlayer.readType() != DFPlayerPlayFinished)
+            return;
+
+        if (--lpCnt <= 0)
+        {
+            lpCnt = 0;
+        }
+        else
+        {
+            myDFPlayer.play(wavNo);
+        }
+    }
 };
-haptic ptn160 = haptic(1);
+haptic hap = haptic();
 
 bool initDFPlayer()
 {
@@ -68,6 +95,8 @@ bool initDFPlayer()
 
 void setup()
 {
+    Nefry.enableSW();
+
     NefryDisplay.begin();
     NefryDisplay.setAutoScrollFlg(true); //自動スクロールを有効
 
@@ -79,8 +108,29 @@ void setup()
 
 void loop()
 {
-    interval<LOOPTIME_PULSE_160>::run([] {
+    //debug
+    if (Nefry.readSW())
+    {
+        hap.wavNo = hap.wavNo % 2 + 1;
+        cnt = cnt % 10 + 1;
+    }
+
+    interval<LOOPTIME_PLAY>::run([] {
         if (isActive)
-            ptn160.play();
+            hap.play(cnt);
+    });
+
+    interval<LOOPTIME_PULSE>::run([] {
+        if (isActive)
+            hap.update();
+    });
+
+    //ディスプレイ
+    interval<LOOPTIME_DISP>::run([] {
+        NefryDisplay.clear();
+        NefryDisplay.setFont(ArialMT_Plain_16);
+        NefryDisplay.drawString(10, 10, "WavNo :" + String(hap.wavNo));
+        NefryDisplay.drawString(10, 30, "Loop(" + String(cnt) + ")  :" + String(hap.lpCnt));
+        NefryDisplay.display();
     });
 }
