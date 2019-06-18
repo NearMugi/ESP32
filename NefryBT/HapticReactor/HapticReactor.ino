@@ -14,8 +14,8 @@ NefrySetting nefrySetting(setting);
 HardwareSerial mySoftwareSerial(1);
 DFRobotDFPlayerMini myDFPlayer;
 bool isActive;
-#define PIN_RX 23
-#define PIN_TX 19
+#define PIN_RX 14 //D8
+#define PIN_TX 13 //D7
 
 //ループ周期(us)
 #include "interval.h"
