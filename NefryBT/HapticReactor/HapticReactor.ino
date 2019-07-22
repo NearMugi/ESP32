@@ -21,8 +21,9 @@ bool isActive;
 #include "interval.h"
 #define LOOPTIME_PULSE 10000
 #define LOOPTIME_DISP 10000
-#define LOOPTIME_PLAY 2000000
+#define LOOPTIME_PLAY 5000000
 
+int SOUND_CNT = 6; //曲数
 //debug
 int cnt = 1; //ループ回数
 
@@ -111,7 +112,7 @@ void loop()
     //debug
     if (Nefry.readSW())
     {
-        hap.wavNo = hap.wavNo % 2 + 1;
+        hap.wavNo = hap.wavNo % SOUND_CNT + 1;
         cnt = cnt % 10 + 1;
     }
 
@@ -131,6 +132,7 @@ void loop()
         NefryDisplay.setFont(ArialMT_Plain_16);
         NefryDisplay.drawString(10, 10, "WavNo :" + String(hap.wavNo));
         NefryDisplay.drawString(10, 30, "Loop(" + String(cnt) + ")  :" + String(hap.lpCnt));
+        NefryDisplay.drawString(10, 50, "Type  :" + String(myDFPlayer.readType()));
         NefryDisplay.display();
     });
 }
