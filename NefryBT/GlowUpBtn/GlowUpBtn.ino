@@ -26,8 +26,9 @@ bool isActive;
 #define LOOPTIME_UPDATE 100000
 #define LOOPTIME_DISP 10000
 
-#define SOUND_CNT 6 //曲数
+#define SOUND_CNT 5 //曲数
 int wavNo;
+bool isLoop;
 
 float nextMotCnt; //次可動させるタイミング
 int MotCnt;       //シーケンス開始からのカウント
@@ -41,7 +42,7 @@ float ofs = 0.1;
 //ここの数値は1s単位、読み込んで設定する際に実際の数値に修正する
 float motSeq[SOUND_CNT][MAX_ON] = {
     {
-        -1,
+        0.64,
         -1,
         -1,
         -1,
@@ -54,8 +55,8 @@ float motSeq[SOUND_CNT][MAX_ON] = {
         -1,
     }, //Mov1
     {
-        -1,
-        -1,
+        0.20,
+        1.50,
         -1,
         -1,
         -1,
@@ -67,57 +68,44 @@ float motSeq[SOUND_CNT][MAX_ON] = {
         -1,
     }, //Mov2
     {
-        -1,
-        -1,
-        -1,
-        -1,
-        -1,
-        -1,
-        -1,
+        5.30,
+        8.32,
+        10.30,
+        13.04,
+        15.46,
+        18.26,
+        21.10,
         -1,
         -1,
         -1,
         -1,
     }, //Mov3
     {
-        -1,
-        -1,
-        -1,
-        -1,
-        -1,
-        -1,
-        -1,
-        -1,
-        -1,
+        0.52,
+        2.46,
+        4.30,
+        6.32,
+        8.20,
+        10.22,
+        11.54,
+        13.48,
+        15.44,
         -1,
         -1,
     }, //Mov4
     {
-        -1,
-        -1,
-        -1,
-        -1,
-        -1,
-        -1,
-        -1,
+        2.38,
+        3.54,
+        6.42,
+        8.32,
+        12.06,
+        13.44,
+        15.48,
         -1,
         -1,
         -1,
         -1,
     }, //Mov5
-    {
-        2.19,
-        3.28,
-        6.21,
-        8.16,
-        12.03,
-        13.22,
-        15.24,
-        -1,
-        -1,
-        -1,
-        -1,
-    }, //Mov6
 };
 
 bool initDFPlayer()
@@ -160,7 +148,7 @@ void setup()
 
     isActive = initDFPlayer();
     wavNo = 0;
-
+    isLoop = false;
     pinMode(PIN_MOTOR, OUTPUT);
     digitalWrite(PIN_MOTOR, HIGH);
     MotCnt = -1;
@@ -184,17 +172,22 @@ void loop()
     //debug
     if (Nefry.readSW())
     {
-        //        wavNo = wavNo % SOUND_CNT + 1;
-        wavNo = 6;
+        wavNo = wavNo % SOUND_CNT + 1;
+        //wavNo = 6;
 
         myDFPlayer.play(wavNo);
         MotCnt = 0;
         idxMot = 0;
         nextMotCnt = setNextMotCnt();
+
+        isLoop = false;
+        if (wavNo == 1 || wavNo == 2)
+        {
+            isLoop = true;
+        }
     }
 
     interval<LOOPTIME_UPDATE>::run([] {
-        //digitalWrite(PIN_MOTOR, LOW);
         digitalWrite(PIN_MOTOR, HIGH);
         if (nextMotCnt >= 0)
         {
@@ -202,7 +195,6 @@ void loop()
             if (nextMotCnt < MotCnt)
             {
                 digitalWrite(PIN_MOTOR, LOW);
-                //digitalWrite(PIN_MOTOR, HIGH);
                 if (++idxMot >= MAX_ON)
                 {
                     idxMot = MAX_ON;
@@ -212,6 +204,17 @@ void loop()
                 {
                     nextMotCnt = setNextMotCnt();
                 }
+            }
+        }
+        else
+        {
+            //終了まで読み込んだあと、ループ指定があればもう一度再生する。
+            if (isLoop)
+            {
+                myDFPlayer.play(wavNo);
+                MotCnt = 0;
+                idxMot = 0;
+                nextMotCnt = setNextMotCnt();
             }
         }
     });
