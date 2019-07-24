@@ -189,7 +189,15 @@ void setWav(int _no)
 
     wavNo = _no;
     wavNoBef = wavNo;
+
+    //AndroidにWavNoを伝える
+    writeValue = String(wavNo);
+    ble.setWriteValue(writeValue);
+    //タイミング調整
+    delay(1000);
+    //音再生
     myDFPlayer.play(wavNo);
+
     MotCnt = 0;
     idxMot = 0;
     nextMotCnt = setNextMotCnt();
@@ -218,10 +226,6 @@ void loop()
             if(readValue.toInt() != wavNoBef){
                 setWav(readValue.toInt());
             }
-
-            //write
-            writeValue = String(wavNo);
-            ble.setWriteValue(writeValue);
         }
         
     });
