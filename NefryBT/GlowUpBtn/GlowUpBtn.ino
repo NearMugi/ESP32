@@ -45,6 +45,7 @@ bool isBLE;
 byte tmpWrite;
 
 #define SOUND_CNT 5 //曲数
+int wavNoBef;
 int wavNo;
 bool isLoop;
 
@@ -171,6 +172,7 @@ void setup()
 
     isActive = initDFPlayer();
     wavNo = 0;
+    wavNoBef = 0;
     isLoop = false;
     pinMode(PIN_MOTOR, OUTPUT);
     digitalWrite(PIN_MOTOR, HIGH);
@@ -201,6 +203,7 @@ void setWav(int _no)
     }
 
     wavNo = _no;
+    wavNoBef = wavNo;
     myDFPlayer.play(wavNo);
     MotCnt = 0;
     idxMot = 0;
@@ -237,7 +240,9 @@ void loop()
                 readValue.toLowerCase();
                 if (isValidNumber(readValue))
                 {
-                    setWav(readValue.toInt());
+                    if(readValue.toInt() != wavNoBef){
+                        setWav(readValue.toInt());
+                    }
                 }
 
                 //write
