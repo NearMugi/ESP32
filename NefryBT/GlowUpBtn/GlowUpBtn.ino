@@ -33,15 +33,13 @@ bool isActive;
 
 //ループ周期(us)
 #include "interval.h"
-#define LOOPTIME_STATUS 70000
-#define LOOPTIME_ACCESS 30000
-#define LOOPTIME_UPDATE 100000
-#define LOOPTIME_DISP 40000
+#define LOOPTIME_STATUS 1000000
+#define LOOPTIME_ACCESS 100000
+#define LOOPTIME_UPDATE 10000
 
 //BLE
 String readValue;
 String writeValue;
-bool isBLE;
 byte tmpWrite;
 
 #define SOUND_CNT 5 //曲数
@@ -142,18 +140,6 @@ bool initDFPlayer()
     return true;
 }
 
-//文字列が数字と認識できるかチェックする
-boolean isValidNumber(String str)
-{
-    boolean isNum = false;
-    for (byte i = 1; i < str.length(); i++)
-    {
-        if (!(isDigit(str.charAt(i)) || str.charAt(i) == '.'))
-            return false;
-    }
-    return true;
-}
-
 void setup()
 {
     Nefry.enableSW();
@@ -168,7 +154,6 @@ void setup()
     readValue = "";
     writeValue = "";
     tmpWrite = 0;
-    isBLE = true;
 
     isActive = initDFPlayer();
     wavNo = 0;
@@ -186,7 +171,7 @@ float setNextMotCnt()
     float _tmp = motSeq[wavNo - 1][idxMot];
     if (_tmp < 0)
         return -1;
-    _tmp = _tmp * size - ofs;
+    _tmp = (_tmp  - ofs) * size;
     if (_tmp < 0)
         _tmp = 0;
     return _tmp;
@@ -218,38 +203,27 @@ void setWav(int _no)
 
 void loop()
 {
-    if(isBLE) ble.loop();
-
-    //debug
-    if (Nefry.readSW())
-    {
-        isBLE = false;
-        setWav(wavNo % SOUND_CNT + 1);
-    }
-
     interval<LOOPTIME_STATUS>::run([] {
-        if(isBLE) ble.update();
+        ble.loop();
+        ble.update();
     });
 
     interval<LOOPTIME_ACCESS>::run([] {
-        if(isBLE){
-            if (ble.getIsConnect())
-            {
-                //read
-                readValue = ble.getReadValue();
-                readValue.toLowerCase();
-                if (isValidNumber(readValue))
-                {
-                    if(readValue.toInt() != wavNoBef){
-                        setWav(readValue.toInt());
-                    }
-                }
-
-                //write
-                writeValue = String(tmpWrite++);
-                ble.setWriteValue(writeValue);
+        
+        if (ble.getIsConnect())
+        {
+            //read
+            readValue = ble.getReadValue();
+            readValue.toLowerCase();
+            if(readValue.toInt() != wavNoBef){
+                setWav(readValue.toInt());
             }
+
+            //write
+            writeValue = String(wavNo);
+            ble.setWriteValue(writeValue);
         }
+        
     });
 
     interval<LOOPTIME_UPDATE>::run([] {
@@ -281,18 +255,12 @@ void loop()
         }
     });
 
-    //ディスプレイ
-    interval<LOOPTIME_DISP>::run([] {
-        NefryDisplay.clear();
-        NefryDisplay.setFont(ArialMT_Plain_10);
-        NefryDisplay.drawString(10, 0, "WavNo : " + String(wavNo));
-        NefryDisplay.drawString(10, 12, "now(s) : " + String((LOOPTIME_UPDATE * MotCnt) / (float)1000000));
-        NefryDisplay.drawString(10, 25, "next   : " + String(nextMotCnt));
-        NefryDisplay.drawString(10, 37, "now    : " + String(MotCnt));
-        if(isBLE){
-            NefryDisplay.drawString(10, 50, ble.getNowStatus_st());
-            NefryDisplay.drawString(70, 50, writeValue);
-        }
-        NefryDisplay.display();
-    });
+    NefryDisplay.clear();
+    NefryDisplay.setFont(ArialMT_Plain_10);
+    NefryDisplay.drawString(10, 0, "WavNo : " + String(wavNo));
+    NefryDisplay.drawString(10, 12, "now(s) : " + String((LOOPTIME_UPDATE * MotCnt) / (float)1000000));
+    NefryDisplay.drawString(10, 25, "next   : " + String(nextMotCnt));
+    NefryDisplay.drawString(10, 37, "now    : " + String(MotCnt));
+    NefryDisplay.drawString(10, 50, ble.getNowStatus_st());
+    NefryDisplay.display();
 }
