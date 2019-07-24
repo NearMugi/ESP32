@@ -31,12 +31,6 @@ bool isActive;
 //モーター(トリガーを渡せば可動する)
 #define PIN_MOTOR 22 //D0
 
-//ループ周期(us)
-#include "interval.h"
-#define LOOPTIME_STATUS 1000000
-#define LOOPTIME_ACCESS 100000
-#define LOOPTIME_UPDATE 10000
-
 //BLE
 String readValue;
 String writeValue;
@@ -47,19 +41,20 @@ int wavNoBef;
 int wavNo;
 bool isLoop;
 
-float nextMotCnt; //次可動させるタイミング
+unsigned long t;
+int intTime;
+int nextMotCnt; //次可動させるタイミング
 int MotCnt;       //シーケンス開始からのカウント
 int idxMot;       //配列のインデックス
 #define MAX_ON 9 //1つの曲の中でONにする最大回数
 
-float size = 1000000 / LOOPTIME_UPDATE;
-float ofs = 0.1;
+int ofs = 100;
 
 //シーケンス -1はシーケンス終了の印
-//ここの数値は1s単位、読み込んで設定する際に実際の数値に修正する
-float motSeq[SOUND_CNT][MAX_ON] = {
+//ms単位
+int motSeq[SOUND_CNT][MAX_ON] = {
     {
-        0.64,
+        640,
         -1,
         -1,
         -1,
@@ -70,8 +65,8 @@ float motSeq[SOUND_CNT][MAX_ON] = {
         -1,
     }, //Mov1
     {
-        0.20,
-        1.50,
+        200,
+        1500,
         -1,
         -1,
         -1,
@@ -81,35 +76,35 @@ float motSeq[SOUND_CNT][MAX_ON] = {
         -1,
     }, //Mov2
     {
-        5.30,
-        8.32,
-        10.30,
-        13.04,
-        15.46,
-        18.26,
-        21.10,
+        5300,
+        8320,
+        10300,
+        13040,
+        15460,
+        18260,
+        21100,
         -1,
         -1,
     }, //Mov3
     {
-        0.52,
-        2.46,
-        4.30,
-        6.32,
-        8.20,
-        10.22,
-        11.54,
-        13.48,
-        15.44,
+        520,
+        2460,
+        4300,
+        6320,
+        8200,
+        10220,
+        11540,
+        13480,
+        15440,
     }, //Mov4
     {
-        2.38,
-        3.54,
-        6.42,
-        8.32,
-        12.06,
-        13.44,
-        15.48,
+        2380,
+        3540,
+        6420,
+        8320,
+        12060,
+        13440,
+        15480,
         -1,
         -1,
     }, //Mov5
@@ -171,7 +166,7 @@ float setNextMotCnt()
     float _tmp = motSeq[wavNo - 1][idxMot];
     if (_tmp < 0)
         return -1;
-    _tmp = (_tmp  - ofs) * size;
+    _tmp = _tmp  - ofs;
     if (_tmp < 0)
         _tmp = 0;
     return _tmp;
@@ -197,6 +192,7 @@ void setWav(int _no)
     delay(1000);
     //音再生
     myDFPlayer.play(wavNo);
+    t = millis();
 
     MotCnt = 0;
     idxMot = 0;
@@ -211,58 +207,51 @@ void setWav(int _no)
 
 void loop()
 {
-    interval<LOOPTIME_STATUS>::run([] {
-        ble.loop();
-        ble.update();
-    });
+    ble.loop();
+    ble.update();
+    if (ble.getIsConnect())
+    {
+        //read
+        readValue = ble.getReadValue();
+        readValue.toLowerCase();
+        if(readValue.toInt() != wavNoBef){
+            setWav(readValue.toInt());
+        }
+    }
 
-    interval<LOOPTIME_ACCESS>::run([] {
-        
-        if (ble.getIsConnect())
+    intTime = millis() - t;
+    t = millis();
+    digitalWrite(PIN_MOTOR, HIGH);
+    if (nextMotCnt >= 0)
+    {
+        MotCnt += intTime;
+        if (nextMotCnt < MotCnt)
         {
-            //read
-            readValue = ble.getReadValue();
-            readValue.toLowerCase();
-            if(readValue.toInt() != wavNoBef){
-                setWav(readValue.toInt());
-            }
-        }
-        
-    });
-
-    interval<LOOPTIME_UPDATE>::run([] {
-        digitalWrite(PIN_MOTOR, HIGH);
-        if (nextMotCnt >= 0)
-        {
-            MotCnt++;
-            if (nextMotCnt < MotCnt)
+            digitalWrite(PIN_MOTOR, LOW);
+            if (++idxMot >= MAX_ON)
             {
-                digitalWrite(PIN_MOTOR, LOW);
-                if (++idxMot >= MAX_ON)
-                {
-                    idxMot = MAX_ON;
-                    nextMotCnt = -1;
-                }
-                else
-                {
-                    nextMotCnt = setNextMotCnt();
-                }
+                idxMot = MAX_ON;
+                nextMotCnt = -1;
             }
-        }
-        else
-        {
-            //終了まで読み込んだあと、ループ指定があればもう一度再生する。
-            if (isLoop)
+            else
             {
-                setWav(wavNo);
+                nextMotCnt = setNextMotCnt();
             }
         }
-    });
+    }
+    else
+    {
+        //終了まで読み込んだあと、ループ指定があればもう一度再生する。
+        if (isLoop)
+        {
+            setWav(wavNo);
+        }
+    }
 
     NefryDisplay.clear();
     NefryDisplay.setFont(ArialMT_Plain_10);
     NefryDisplay.drawString(10, 0, "WavNo : " + String(wavNo));
-    NefryDisplay.drawString(10, 12, "now(s) : " + String((LOOPTIME_UPDATE * MotCnt) / (float)1000000));
+    NefryDisplay.drawString(10, 12, "intTime: " + String(intTime));
     NefryDisplay.drawString(10, 25, "next   : " + String(nextMotCnt));
     NefryDisplay.drawString(10, 37, "now    : " + String(MotCnt));
     NefryDisplay.drawString(10, 50, ble.getNowStatus_st());
