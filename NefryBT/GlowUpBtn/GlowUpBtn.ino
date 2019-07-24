@@ -41,6 +41,11 @@ int wavNoBef;
 int wavNo;
 bool isLoop;
 
+bool isWait;
+int waitTime = 1000;
+int waitTriggerTime;
+
+
 unsigned long t;
 int intTime;
 int nextMotCnt; //次可動させるタイミング
@@ -188,11 +193,14 @@ void setWav(int _no)
     //AndroidにWavNoを伝える
     writeValue = String(wavNo);
     ble.setWriteValue(writeValue);
-    //タイミング調整
-    delay(1000);
-    //音再生
+
+    isWait  = true;
+    waitTriggerTime = millis();
+}
+
+void playWav(){
+    isWait = false;
     myDFPlayer.play(wavNo);
-    t = millis();
 
     MotCnt = 0;
     idxMot = 0;
@@ -207,6 +215,9 @@ void setWav(int _no)
 
 void loop()
 {
+    intTime = millis() - t;
+    t = millis();
+
     ble.loop();
     ble.update();
     if (ble.getIsConnect())
@@ -219,8 +230,12 @@ void loop()
         }
     }
 
-    intTime = millis() - t;
-    t = millis();
+    if(isWait){
+        if(waitTime >= millis() - waitTriggerTime){
+            playWav();
+        }
+    }
+
     digitalWrite(PIN_MOTOR, HIGH);
     if (nextMotCnt >= 0)
     {
