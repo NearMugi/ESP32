@@ -42,7 +42,7 @@ int wavNo;
 bool isLoop;
 
 bool isWait;
-int waitTime = 100;
+int waitTime = 200;
 unsigned long waitTriggerTime;
 
 
