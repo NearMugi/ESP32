@@ -42,8 +42,8 @@ int wavNo;
 bool isLoop;
 
 bool isWait;
-int waitTime = 1000;
-int waitTriggerTime;
+int waitTime = 100;
+unsigned long waitTriggerTime;
 
 
 unsigned long t;
@@ -53,7 +53,7 @@ int MotCnt;       //シーケンス開始からのカウント
 int idxMot;       //配列のインデックス
 #define MAX_ON 9 //1つの曲の中でONにする最大回数
 
-int ofs = 100;
+int ofs = 0;
 
 //シーケンス -1はシーケンス終了の印
 //ms単位
@@ -189,6 +189,12 @@ void setWav(int _no)
 
     wavNo = _no;
     wavNoBef = wavNo;
+    isLoop = false;
+    if (wavNo == 1 || wavNo == 2)
+    {
+        isLoop = true;
+    }
+    nextMotCnt = -1;
 
     //AndroidにWavNoを伝える
     writeValue = String(wavNo);
@@ -196,27 +202,26 @@ void setWav(int _no)
 
     isWait  = true;
     waitTriggerTime = millis();
+    Serial.println("+++ Set waitTriggerTime");
 }
 
 void playWav(){
+    Serial.println("+++ playWav");
     isWait = false;
     myDFPlayer.play(wavNo);
-
     MotCnt = 0;
     idxMot = 0;
     nextMotCnt = setNextMotCnt();
-
-    isLoop = false;
-    if (wavNo == 1 || wavNo == 2)
-    {
-        isLoop = true;
-    }
 }
 
 void loop()
 {
     intTime = millis() - t;
     t = millis();
+
+    if(Nefry.readSW()){
+        waitTime = (((waitTime / 100) % 10) + 1)* 100;
+    }
 
     ble.loop();
     ble.update();
@@ -230,45 +235,47 @@ void loop()
         }
     }
 
+    digitalWrite(PIN_MOTOR, HIGH);
     if(isWait){
-        if(waitTime >= millis() - waitTriggerTime){
+        if(waitTime <= millis() - waitTriggerTime){
             playWav();
+        }
+    } else {
+        if (nextMotCnt >= 0)
+        {
+            MotCnt += intTime;
+            if (nextMotCnt < MotCnt)
+            {
+                digitalWrite(PIN_MOTOR, LOW);
+                if (++idxMot >= MAX_ON)
+                {
+                    idxMot = MAX_ON;
+                    nextMotCnt = -1;
+                }
+                else
+                {
+                    nextMotCnt = setNextMotCnt();
+                }
+            }
+        }
+        else
+        {
+            //終了まで読み込んだあと、ループ指定があればもう一度再生する。
+            if (isLoop)
+            {
+                setWav(wavNo);
+            }
         }
     }
 
-    digitalWrite(PIN_MOTOR, HIGH);
-    if (nextMotCnt >= 0)
-    {
-        MotCnt += intTime;
-        if (nextMotCnt < MotCnt)
-        {
-            digitalWrite(PIN_MOTOR, LOW);
-            if (++idxMot >= MAX_ON)
-            {
-                idxMot = MAX_ON;
-                nextMotCnt = -1;
-            }
-            else
-            {
-                nextMotCnt = setNextMotCnt();
-            }
-        }
-    }
-    else
-    {
-        //終了まで読み込んだあと、ループ指定があればもう一度再生する。
-        if (isLoop)
-        {
-            setWav(wavNo);
-        }
-    }
 
     NefryDisplay.clear();
     NefryDisplay.setFont(ArialMT_Plain_10);
     NefryDisplay.drawString(10, 0, "WavNo : " + String(wavNo));
     NefryDisplay.drawString(10, 12, "intTime: " + String(intTime));
-    NefryDisplay.drawString(10, 25, "next   : " + String(nextMotCnt));
-    NefryDisplay.drawString(10, 37, "now    : " + String(MotCnt));
+    NefryDisplay.drawString(10, 25, "wait: " + String(waitTime));
+    NefryDisplay.drawString(10, 37, "next   : " + String(nextMotCnt));
+    NefryDisplay.drawString(80, 37, "<-" + String(MotCnt));
     NefryDisplay.drawString(10, 50, ble.getNowStatus_st());
     NefryDisplay.display();
 }
