@@ -8,7 +8,6 @@
 #include <NefrySetting.h>
 void setting() {
   Nefry.disableDisplayStatus();
-  Nefry.disableWifi();
 }
 NefrySetting nefrySetting(setting);
 
@@ -29,12 +28,12 @@ PubSubClient client(espClient);
 
 const int pixel_array_size = 8*8;
 float pixels[pixel_array_size];
-const unsigned int dataSize = 6 * pixel_array_size;
+const unsigned int dataSize = 100;
 
 Adafruit_AMG88xx amg;
 bool status;
 
-void mqttPublish(String _data){    
+void mqttPublish(String _tag, String _data, time_t _t){    
     // Create a random client ID
     String clientId = "ESP32Client-";
     clientId += String(random(0xffff), HEX);
@@ -45,16 +44,16 @@ void mqttPublish(String _data){
     const char* tmp = bbt_token.c_str();
     // Attempt to connect
     if (client.connect(clientId.c_str(), tmp, "")) {
-        time_t  t = time(NULL);
         char buffer[dataSize];
         StaticJsonBuffer<dataSize> jsonOutBuffer;
         JsonObject& root = jsonOutBuffer.createObject();
-        root["AMG8833"] = _data;
+        root[_tag] = _data;
         root["ispublic"] = true;
-        root["ts"] = t;
+        root["ts"] = _t;
 
         // Now print the JSON into a char buffer
         root.printTo(buffer, sizeof(buffer));
+        Serial.println(buffer);
 
         // Now publish the char buffer to Beebotte
         client.publish(topic, buffer, QoS);
@@ -87,13 +86,20 @@ void loop() {
 
     amg.readPixels(pixels);
 
-    String t = "";
+    time_t  t = time(NULL);
+    String data = "";
+    int j = 0;
+    int k = 0;
     for(int i=0; i<pixel_array_size; i++){
-        t += String(pixels[i]);
-        t += ",";
+        data += String(pixels[i]);
+        data += ",";
+
+        if(++j >= 8){
+            mqttPublish(String(k++), data, t);
+            j = 0;
+            data = "";
+        }
     }
-    Serial.println(t);
-    mqttPublish(t);
 
     delay(100);
 }
