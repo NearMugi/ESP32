@@ -20,9 +20,16 @@ NefrySetting nefrySetting(setting);
 #define BBT "mqtt.beebotte.com"
 #define QoS 0
 String bbt_token;
-#define Channel "Cat"
-#define Res "AMG8833"
-char topic[64];
+#define Channel "AMG8833"
+#define Res0 "a0"
+#define Res1 "a1"
+#define Res2 "a2"
+#define Res3 "a3"
+#define Res4 "a4"
+#define Res5 "a5"
+#define Res6 "a6"
+#define Res7 "a7"
+char topic[8][15];
 WiFiClient espClient;
 PubSubClient client(espClient);
 
@@ -33,7 +40,7 @@ const unsigned int dataSize = 100;
 Adafruit_AMG88xx amg;
 bool status;
 
-void mqttPublish(String _tag, String _data, time_t _t){    
+void mqttPublish(int _idx, String _data, time_t _t){    
     // Create a random client ID
     String clientId = "ESP32Client-";
     clientId += String(random(0xffff), HEX);
@@ -47,16 +54,14 @@ void mqttPublish(String _tag, String _data, time_t _t){
         char buffer[dataSize];
         StaticJsonBuffer<dataSize> jsonOutBuffer;
         JsonObject& root = jsonOutBuffer.createObject();
-        root[_tag] = _data;
-        root["ispublic"] = true;
+        root["data"] = _data;
         root["ts"] = _t;
 
         // Now print the JSON into a char buffer
         root.printTo(buffer, sizeof(buffer));
-        Serial.println(buffer);
-
+        
         // Now publish the char buffer to Beebotte
-        client.publish(topic, buffer, QoS);
+        client.publish(topic[_idx], buffer, QoS);
     }    
 }
 
@@ -70,7 +75,15 @@ void setup() {
     
     Nefry.setStoreTitle("MQTT_Token", NEFRY_DATASTORE_BEEBOTTE); 
     client.setServer(BBT, 1883);
-    sprintf(topic, "%s/%s", Channel, Res);
+    
+    sprintf(topic[0], "%s/%s", Channel, Res0);
+    sprintf(topic[1], "%s/%s", Channel, Res1);
+    sprintf(topic[2], "%s/%s", Channel, Res2);
+    sprintf(topic[3], "%s/%s", Channel, Res3);
+    sprintf(topic[4], "%s/%s", Channel, Res4);
+    sprintf(topic[5], "%s/%s", Channel, Res5);
+    sprintf(topic[6], "%s/%s", Channel, Res6);
+    sprintf(topic[7], "%s/%s", Channel, Res7);
 
     NefryDisplay.clear();
     NefryDisplay.display();
@@ -95,7 +108,7 @@ void loop() {
         data += ",";
 
         if(++j >= 8){
-            mqttPublish(String(k++), data, t);
+            mqttPublish(k++, data, t);
             j = 0;
             data = "";
         }
