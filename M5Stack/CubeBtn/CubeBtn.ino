@@ -1,35 +1,25 @@
-// +++++++++++++++++++
-// M5Stackに変更
-// +++++++++++++++++++
-
-
-
 //磁気センサーを用いた、キューブ型ボタン
 //publishするときにtopicを変える
 //1～4:早起きボタン
 //5:給食
 //6:？？？
 
-#include <Nefry.h>
-#include <NefryDisplay.h>
+#include <WiFi.h>
+#include <M5Stack.h>
 #include <PubSubClient.h>
+#include "interval.h"
+#include "googleCloudFunctions.h"
 #include <ArduinoJson.h>
-#include <NefrySetting.h>
-void setting() {
-  Nefry.disableDisplayStatus();
-}
-NefrySetting nefrySetting(setting);
 
 
 //++++++++++++++++++++++++++++++++++++++++++++
 //プロジェクト全体の定義
 //++++++++++++++++++++++++++++++++++++++++++++
 //使用ピン
-#define PIN_JIKI A3
-#define PIN_BTN D8
+#define PIN_JIKI 14
+#define PIN_BTN 16
 
 //ループ周期(us)
-#include "interval.h"
 #define LOOPTIME_DISP  100000
 #define LOOPTIME_JIKI  30000
 #define LOOPTIME_BTN   50000
@@ -47,6 +37,14 @@ String nowStatus = STATUS_TAIKI;
 //MQTT送信中の待ち時間(ms)
 #define WAIT_MQTT_PUBLISH 5000
 unsigned long waitingTime;
+
+//Wifi
+char *ssid = "Buffalo-G-36F0";
+char *password = "[パスワード]";
+
+//googleCloudFunctions
+const String host = "[プロジェクト名].cloudfunctions.net";
+googleCloudFunctions cfs;
 
 //++++++++++++++++++++++++++++++++++++++++++++
 //スリープ
@@ -100,95 +98,41 @@ int BtnAniCnt;
 int MqttCnt;
 
 //++++++++++++++++++++++++++++++++++++++++++++
-//折れ線グラフ
-//++++++++++++++++++++++++++++++++++++++++++++
-#include "dispGraphBar.h"
-//static変数を定義
-int graph_bar::valueSIZE;
-
-//棒グラフ(横方向)の領域
-#define GRAPH_BARS_POS_X 80
-#define GRAPH_BARS_POS_Y 54
-#define GRAPH_BARS_LEN_X 40
-#define GRAPH_BARS_LEN_Y 10
-
-#define VALUE_BAR_MIN 0
-#define VALUE_BAR_MAX 4098 //esp32は分解能12bit
-#define BAR_PLOT_SIZE 20  //保存するデータ数
-graph_bar grbar;
-
-//グラフの設定
-//保存するデータ数が可変なので外部で配列を用意している
-//縦方向と横方向は同じデータを使う
-int vb1[BAR_PLOT_SIZE];
-
-//グラフの初期化
-void dispGraphBarS_init() {
-  grbar = graph_bar(
-            BAR_SIDE,
-            LOOPTIME_DISP,
-            GRAPH_BARS_POS_X,
-            GRAPH_BARS_POS_Y,
-            GRAPH_BARS_LEN_X,
-            GRAPH_BARS_LEN_Y,
-            VALUE_BAR_MIN,
-            VALUE_BAR_MAX,
-            BAR_PLOT_SIZE
-          );
-  grbar.initGraphTime();
-  grbar.setGraph(0, &vb1[0]);
-}
-
-
-//棒グラフ(横方向)の描画
-void dispGraphBarS_update() {
-  grbar.dispArea();
-  grbar.updateGraph();
-}
-
-//++++++++++++++++++++++++++++++++++++++++++++
 //MQTT
 //++++++++++++++++++++++++++++++++++++++++++++
-#define NEFRY_DATASTORE_BEEBOTTE_CUBEBTN 1
 #define BBT "mqtt.beebotte.com"
 #define QoS 2
+
+char *topicUser = "CubeButton/user";
+char *topicFood = "CubeButton/food";
 String bbt_token;
-#define Channel "CubeButton"
-#define ResUser "user"
-char topic_user[64];
-#define ResFood "food"
-char topic_food[64];
 WiFiClient espClient;
 PubSubClient client(espClient);
-bool isInitMqtt;
 
 
-//connect mqtt broker
-void reconnect() {
-  Serial.print("Attempting MQTT connection...");
+void reconnect()
+{
+  Serial.print(F("\nAttempting MQTT connection..."));
   // Create a random client ID
   String clientId = "ESP32Client-";
   clientId += String(random(0xffff), HEX);
 
-  //NefryのDataStoreに書き込んだToken(String)を(const char*)に変換
-  bbt_token = "token:";
-  bbt_token += Nefry.getStoreStr(NEFRY_DATASTORE_BEEBOTTE_CUBEBTN);
-  const char* tmp = bbt_token.c_str();
   // Attempt to connect
-  if (client.connect(clientId.c_str(), tmp, "")) {
+  if (client.connect(clientId.c_str(), bbt_token.c_str(), ""))
+  {
     Serial.println("connected");
-    MsgMqtt = "Mqtt OK";
   } else {
     Serial.print("failed, rc=");
     Serial.println(client.state());
-    MsgMqtt = "Mqtt NG";
   }
 }
 
 void publish()
 {
+  //https://arduinojson.org/v6/doc/upgrade/
+  //要　修正
   char buffer[128];
-  StaticJsonBuffer<128> jsonOutBuffer;
+  StaticJsonDocument<128> jsonOutBuffer;
   JsonObject& root = jsonOutBuffer.createObject();
 
   //日付を取得する
@@ -215,7 +159,7 @@ void publish()
       root.printTo(buffer, sizeof(buffer));
 
       // Now publish the char buffer to Beebotte
-      client.publish(topic_user, buffer, QoS);
+      client.publish(topicUser, buffer, QoS);
       break;
 
     //給食
@@ -243,7 +187,7 @@ void publish()
         root.printTo(buffer, sizeof(buffer));
 
         // Now publish the char buffer to Beebotte
-        client.publish(topic_food, buffer, QoS);
+        client.publish(topicFood, buffer, QoS);
         break;
       }
     case JIKI_PTN6:
@@ -260,37 +204,46 @@ void publish()
 #define JST     3600*9
 
 void setup() {
-  Nefry.setProgramName("Trigger CubeButton");
 
-  NefryDisplay.begin();
-  NefryDisplay.setAutoScrollFlg(true);//自動スクロールを有効
+  Serial.begin(115200);
+  M5.begin();
+  M5.Lcd.setBrightness(120); // BRIGHTNESS = MAX 255
+  M5.Lcd.fillScreen(BLACK);  // CLEAR SCREEN
+  M5.Lcd.setRotation(1);     // SCREEN ROTATION = 0
 
-  NefryDisplay.clear();
-  NefryDisplay.display();
-  Nefry.ndelay(10);
+  M5.Lcd.setCursor(50, 120);
+  M5.Lcd.setTextSize(3);
+  M5.Lcd.setTextColor(ORANGE);
+  M5.Lcd.print("setup...");
+
+  //Wifi
+  Serial.print(F("Wifi "));
+  Serial.print(ssid);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+  }
+  Serial.println(F(" Connect"));
+
+  //googleCloudFunctions
+  cfs.InitAPI();
 
   //pin
   pinMode(PIN_JIKI, INPUT);
   pinMode(PIN_BTN, INPUT);
 
   //mqtt
+  String ret = cfs.getRuntimeConfig(host, "MQTT");
+  //取得したjsonデータから欲しい情報を取得する
+  bbt_token = "";
+  bbt_token += "token:";
+  bbt_token += cfs.getJsonValue(ret, "CubeButton");
   client.setServer(BBT, 1883);
-  sprintf(topic_user, "%s/%s", Channel, ResUser);
-  sprintf(topic_food, "%s/%s", Channel, ResFood);
-  Nefry.setStoreTitle("Token_CubeButton", NEFRY_DATASTORE_BEEBOTTE_CUBEBTN);
-  String _tmp = Nefry.getStoreStr(NEFRY_DATASTORE_BEEBOTTE_CUBEBTN);
-  isInitMqtt = false;
-  MsgMqtt = "MQTT INIT NG";
-  if (_tmp.length() > 0) {
-    isInitMqtt = true;
-    MsgMqtt = "";
-  }
 
   //date
   configTime( JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
 
-  //グラフ
-  dispGraphBarS_init();
   BtnAniCnt = 0;
   MqttCnt = 0;
 
@@ -308,13 +261,6 @@ void loopDisplay() {
   IPAddress ip = WiFi.localIP();
   ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
 
-  //グラフデータの更新
-  grbar.addGraphData(0, jiki[JIKI_SIZE - 1]);
-  grbar.updateGraphTime();
-
-  //描画
-  NefryDisplay.clear();
-
   //ユーザー向けの情報
   if (++BtnAniCnt > 10) BtnAniCnt = 0;
   if (nowStatus == STATUS_NONE) {
@@ -325,74 +271,11 @@ void loopDisplay() {
   if (nowStatus == STATUS_TAIKI || nowStatus == STATUS_BTN_ON) {
     //次のMQTT送信向けに変数を初期化しておく
     MqttCnt = 0;
-
-    //選択中の番号
-    int _ofs = 2;
-    int _lenPtn = 19;
-    for (int i = 0; i < 6; i++) {
-      if (i == jikiPtn - 1) {
-        NefryDisplay.drawRect(2 + (_lenPtn + _ofs) * i , 2, _lenPtn, _lenPtn);
-        NefryDisplay.setFont(ArialMT_Plain_16);
-        NefryDisplay.drawString(2 + (_lenPtn + _ofs) * i + 4 , 2, String(i+1));
-      } else {
-        NefryDisplay.fillRect(2 + (_lenPtn + _ofs) * i , 2, _lenPtn, _lenPtn);
-      }
-
-    }
-
-    //ボタンを押すアニメーション
-    int _ofsBtnAni = 25;
-    NefryDisplay.drawCircle(15, _ofsBtnAni + 5, 3);
-    NefryDisplay.drawCircle(35, _ofsBtnAni + 5, 3);
-    NefryDisplay.drawRect(22, _ofsBtnAni + 10, 6, 4);
-
-    NefryDisplay.fillRect(70, _ofsBtnAni + 8, 28, 8);
-    if (nowStatus == STATUS_TAIKI) {
-      if (jikiPtn >= 1 && jikiPtn <= 6) {
-        NefryDisplay.drawLine(40, _ofsBtnAni + 15, 50, _ofsBtnAni + (BtnAniCnt / 2));
-        NefryDisplay.drawRect(76, _ofsBtnAni + (BtnAniCnt / 2), 16, 9);
-      } else {
-        NefryDisplay.drawRect(76, _ofsBtnAni, 16, 9);
-      }
-    } else {
-      //ボタンを押した
-      NefryDisplay.drawLine(40, _ofsBtnAni + 15, 50, _ofsBtnAni + 5);
-      NefryDisplay.drawRect(76, _ofsBtnAni + 5, 16, 9);
-    }
   }
 
   //MQTTにパブリッシュ中
   if (nowStatus == STATUS_MQTT_SUC) {
-    //Btn
-    NefryDisplay.fillRect(10, 40, 20, 5);
-    NefryDisplay.drawRect(15, 35, 10, 10);
-
-    //GoogleHomeMini
-    NefryDisplay.drawCircle(90, 22, 15);
-    NefryDisplay.drawCircle(80, 22, 2);
-    NefryDisplay.drawCircle(85, 22, 2);
-    NefryDisplay.drawCircle(85, 22, 2);
-    NefryDisplay.drawCircle(100, 22, 2);
-
-    //通信
-    if (++MqttCnt > 50) MqttCnt = 0;
-    NefryDisplay.setFont(ArialMT_Plain_16);
-    NefryDisplay.drawString(20 + MqttCnt, 22, ")))");
   }
-
-  //デバッグ用
-  int _ofsDebug = 44;
-  NefryDisplay.setFont(ArialMT_Plain_10);
-  NefryDisplay.drawString(0, _ofsDebug, ipStr);
-  NefryDisplay.drawString(60, _ofsDebug, MsgMqtt);
-  NefryDisplay.drawString(0, _ofsDebug + 10, String(jikiPtn));
-  NefryDisplay.drawString(7, _ofsDebug + 10, nowStatus);
-  NefryDisplay.drawString(60, _ofsDebug + 10, String(jikiAvg));
-
-  //グラフの描画
-  dispGraphBarS_update();
-
-  NefryDisplay.display();
 }
 
 void loopJikiSensor() {
@@ -458,12 +341,6 @@ void loopBtn() {
     }
   }
 
-  if (btn) {
-    Nefry.setLed(128, 0, 255);
-  } else {
-    Nefry.setLed(0, 255, 0);
-  }
-
   //MQTT送信中の時はボタンを無効にする
   if (nowStatus == STATUS_MQTT_SUC) return;
 
@@ -482,8 +359,6 @@ void loopBtn() {
 
 
 void loopMQTT() {
-
-  if (!isInitMqtt) return;
   if (!client.connected()) reconnect();
   //送信中の待ち
   if (nowStatus == STATUS_MQTT_SUC) {
@@ -517,16 +392,10 @@ void loopMQTT() {
 
 
 void loop() {
+
   //Sleep
   interval<LOOPTIME_SLEEP_CNT>::run([] {
     if (++sleepCnt >= SLEEP_CNT_S) {
-      NefryDisplay.clear();
-      NefryDisplay.setFont(ArialMT_Plain_24);
-      NefryDisplay.drawString(20, 5, "SLEEP....");
-      NefryDisplay.setFont(ArialMT_Plain_10);
-      NefryDisplay.drawString(20, 55, "...Please push RESET BTN");
-      NefryDisplay.display();
-      Nefry.sleep(-1);
     }
   });
 
@@ -549,5 +418,7 @@ void loop() {
   interval<LOOPTIME_DISP>::run([] {
     loopDisplay();
   });
+
+  M5.update();
 
 }
