@@ -37,15 +37,21 @@ unsigned long waitingTime;
 
 //Wifi
 char *ssid = "Buffalo-G-36F0";
-char *password = "[パスワード]";
+char *password = "[password]";
 
 //googleCloudFunctions
-const String host = "[プロジェクト名].cloudfunctions.net";
+const String host = "[Project Name].cloudfunctions.net";
 googleCloudFunctions cfs;
 
 //date
 #include <time.h>
 #define JST 3600 * 9
+
+//button
+const uint8_t buttonA_GPIO = 39;
+const uint8_t buttonB_GPIO = 38;
+const uint8_t buttonC_GPIO = 37;
+
 
 //++++++++++++++++++++++++++++++++++++++++++++
 //磁気センサ(キューブ)
@@ -84,8 +90,8 @@ int btnCnt = 0;
 //++++++++++++++++++++++++++++++++++++++++++++
 //MQTT
 //++++++++++++++++++++++++++++++++++++++++++++
-#define BBT "mqtt.beebotte.com"
-#define QoS 2
+char *BBT = "mqtt.beebotte.com";
+int QoS = 1;
 char *topicUser = "CubeButton/user";
 char *topicFood = "CubeButton/food";
 String bbt_token = "";
@@ -95,6 +101,8 @@ PubSubClient client(espClient);
 void reconnect()
 {
   Serial.print(F("\nAttempting MQTT connection..."));
+  M5.Lcd.setCursor(0, 100);
+  M5.Lcd.print(F("MQTT connection..."));    
   // Create a random client ID
   String clientId = "ESP32Client-";
   clientId += String(random(0xffff), HEX);
@@ -103,11 +111,15 @@ void reconnect()
   if (client.connect(clientId.c_str(), bbt_token.c_str(), ""))
   {
     Serial.println("connected");
+    M5.Lcd.setCursor(0, 125);
+    M5.Lcd.print(F("connected"));   
   }
   else
   {
     Serial.print("failed, rc=");
     Serial.println(client.state());
+    M5.Lcd.setCursor(0, 125);
+    M5.Lcd.print(F("failed..."));   
   }
 }
 
@@ -115,7 +127,7 @@ void publish()
 {
   //https://arduinojson.org/v6/doc/upgrade/
   char buffer[128];
-  DynamicJsonDocument root(128);
+  StaticJsonDocument<128> root;
 
   //日付を取得する
   time_t t = time(NULL);
@@ -143,6 +155,11 @@ void publish()
 
     // Now publish the char buffer to Beebotte
     client.publish(topicUser, buffer, QoS);
+    M5.Lcd.fillScreen(BLACK);  // CLEAR SCREEN
+    M5.Lcd.setCursor(0, 0);
+    M5.Lcd.print(topicUser);    
+    M5.Lcd.setCursor(0, 25);
+    M5.Lcd.print(buffer);    
     break;
 
   //給食
@@ -175,6 +192,11 @@ void publish()
 
     // Now publish the char buffer to Beebotte
     client.publish(topicFood, buffer, QoS);
+    M5.Lcd.fillScreen(BLACK);  // CLEAR SCREEN
+    M5.Lcd.setCursor(0, 0);
+    M5.Lcd.print(topicFood);    
+    M5.Lcd.setCursor(0, 25);
+    M5.Lcd.print(buffer);    
     break;
   }
   case JIKI_PTN6:
@@ -192,11 +214,8 @@ void setup()
   M5.Lcd.setBrightness(120); // BRIGHTNESS = MAX 255
   M5.Lcd.fillScreen(BLACK);  // CLEAR SCREEN
   M5.Lcd.setRotation(1);     // SCREEN ROTATION = 0
-
-  M5.Lcd.setCursor(50, 120);
-  M5.Lcd.setTextSize(3);
+  M5.Lcd.setTextSize(2);
   M5.Lcd.setTextColor(ORANGE);
-  M5.Lcd.print("setup...");
 
   //Wifi
   Serial.print(F("Wifi "));
@@ -207,6 +226,8 @@ void setup()
     delay(500);
   }
   Serial.println(F(" Connect"));
+  M5.Lcd.setCursor(0, 0);
+  M5.Lcd.print(F("Wifi Connect"));
 
   //googleCloudFunctions
   cfs.InitAPI();
@@ -214,6 +235,10 @@ void setup()
   //pin
   pinMode(PIN_JIKI, INPUT);
   pinMode(PIN_BTN, INPUT);
+  //button
+  pinMode(buttonA_GPIO, INPUT);
+  pinMode(buttonB_GPIO, INPUT);
+  pinMode(buttonC_GPIO, INPUT);
 
   //mqtt
   String ret = cfs.getRuntimeConfig(host, "MQTT");
@@ -222,6 +247,8 @@ void setup()
   bbt_token += "token:";
   bbt_token += cfs.getJsonValue(ret, "CubeButton");
   client.setServer(BBT, 1883);
+  M5.Lcd.setCursor(0, 50);
+  M5.Lcd.print(bbt_token);
 
   //date
   configTime(JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
@@ -330,9 +357,6 @@ void loopBtn()
 
 void loopMQTT()
 {
-  if (!client.connected())
-    reconnect();
-
   //送信中の待ち
   if (nowStatus == STATUS_MQTT_SUC)
   {
@@ -370,6 +394,15 @@ void loopMQTT()
 
 void loop()
 {
+  if (!client.connected())
+    reconnect();
+
+  //MQTT publish
+  interval<LOOPTIME_MQTT>::run([] {
+    loopMQTT();
+  });
+
+#if false
   //JikiSensor
   interval<LOOPTIME_JIKI>::run([] {
     loopJikiSensor();
@@ -380,15 +413,31 @@ void loop()
     loopBtn();
   });
 
-  //MQTT publish
-  interval<LOOPTIME_MQTT>::run([] {
-    loopMQTT();
-  });
-
   //Display
   interval<LOOPTIME_DISP>::run([] {
     loopDisplay();
   });
+#endif
+
+  //デバッグ用
+  if (M5.BtnA.wasPressed())
+  {
+    jikiPtn = JIKI_PTN1;
+    nowStatus = STATUS_BTN_ON;
+  }
+
+  if (M5.BtnB.wasPressed())
+  {
+    jikiPtn = JIKI_PTN5;
+    nowStatus = STATUS_BTN_ON;
+  }
+
+  if (M5.BtnC.wasPressed())
+  {
+    jikiPtn = JIKI_PTN6;
+    nowStatus = STATUS_BTN_ON;
+  }
+
 
   M5.update();
 }
