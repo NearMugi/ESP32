@@ -11,7 +11,6 @@
 #include "googleCloudFunctions.h"
 #include <ArduinoJson.h>
 
-
 //++++++++++++++++++++++++++++++++++++++++++++
 //プロジェクト全体の定義
 //++++++++++++++++++++++++++++++++++++++++++++
@@ -20,12 +19,11 @@
 #define PIN_BTN 16
 
 //ループ周期(us)
-#define LOOPTIME_DISP  100000
-#define LOOPTIME_JIKI  30000
-#define LOOPTIME_BTN   50000
-#define LOOPTIME_MQTT  500000
-#define LOOPTIME_SLEEP_CNT  1000000
-
+#define LOOPTIME_DISP 100000
+#define LOOPTIME_JIKI 30000
+#define LOOPTIME_BTN 50000
+#define LOOPTIME_MQTT 500000
+#define LOOPTIME_SLEEP_CNT 1000000
 
 //ステータス
 #define STATUS_NONE "NONE"
@@ -49,7 +47,7 @@ googleCloudFunctions cfs;
 //++++++++++++++++++++++++++++++++++++++++++++
 //スリープ
 //++++++++++++++++++++++++++++++++++++++++++++
-const unsigned int SLEEP_CNT_S = 3600;  //スリープに入るまでのカウント(秒)
+const unsigned int SLEEP_CNT_S = 3600; //スリープに入るまでのカウント(秒)
 unsigned int sleepCnt;
 
 //++++++++++++++++++++++++++++++++++++++++++++
@@ -109,7 +107,6 @@ String bbt_token;
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-
 void reconnect()
 {
   Serial.print(F("\nAttempting MQTT connection..."));
@@ -121,7 +118,9 @@ void reconnect()
   if (client.connect(clientId.c_str(), bbt_token.c_str(), ""))
   {
     Serial.println("connected");
-  } else {
+  }
+  else
+  {
     Serial.print("failed, rc=");
     Serial.println(client.state());
   }
@@ -130,13 +129,11 @@ void reconnect()
 void publish()
 {
   //https://arduinojson.org/v6/doc/upgrade/
-  //要　修正
   char buffer[128];
-  StaticJsonDocument<128> jsonOutBuffer;
-  JsonObject& root = jsonOutBuffer.createObject();
+  DynamicJsonDocument root(128);
 
   //日付を取得する
-  time_t  t = time(NULL);
+  time_t t = time(NULL);
   struct tm *tm;
   tm = localtime(&t);
   uint8_t mon = tm->tm_mon + 1;
@@ -145,65 +142,70 @@ void publish()
   uint8_t hour = tm->tm_hour;
 
   //パターンごとに送信するトピックを変更する
-  switch (jikiPtn) {
-    //早起きボタン
-    case JIKI_PTN1:
-    case JIKI_PTN2:
-    case JIKI_PTN3:
-    case JIKI_PTN4:
-      root["user"] = jikiPtn;
-      root["ispublic"] = true;
-      root["ts"] = t;
+  switch (jikiPtn)
+  {
+  //早起きボタン
+  case JIKI_PTN1:
+  case JIKI_PTN2:
+  case JIKI_PTN3:
+  case JIKI_PTN4:
+    root["user"] = jikiPtn;
+    root["ispublic"] = true;
+    root["ts"] = t;
 
-      // Now print the JSON into a char buffer
-      root.printTo(buffer, sizeof(buffer));
+    // Now print the JSON into a char buffer
+    serializeJson(root, buffer);
 
-      // Now publish the char buffer to Beebotte
-      client.publish(topicUser, buffer, QoS);
-      break;
+    // Now publish the char buffer to Beebotte
+    client.publish(topicUser, buffer, QoS);
+    break;
 
-    //給食
-    case JIKI_PTN5:
-      {
-        uint8_t plusDay = 0;
-        if (wd == 0) plusDay = 1;   //日曜日だった場合は月曜日の日付にする。
-        if (hour >= 20) plusDay = 1; //20時以降だった場合は翌日の日付にする。
-        if (wd == 6 && hour >= 20) plusDay = 2; //土曜日、かつ20時以降だった場合は月曜日の日付にする。
-        if (plusDay > 0) {
-          t += 86400 * plusDay;
-          tm = localtime(&t);
-          mon = tm->tm_mon + 1;
-          day = tm->tm_mday;
-        }
+  //給食
+  case JIKI_PTN5:
+  {
+    uint8_t plusDay = 0;
+    if (wd == 0)
+      plusDay = 1; //日曜日だった場合は月曜日の日付にする。
+    if (hour >= 20)
+      plusDay = 1; //20時以降だった場合は翌日の日付にする。
+    if (wd == 6 && hour >= 20)
+      plusDay = 2; //土曜日、かつ20時以降だった場合は月曜日の日付にする。
+    if (plusDay > 0)
+    {
+      t += 86400 * plusDay;
+      tm = localtime(&t);
+      mon = tm->tm_mon + 1;
+      day = tm->tm_mday;
+    }
 
-        char date[4];
-        sprintf(date, "%02d%02d", mon, day);
+    char date[4];
+    sprintf(date, "%02d%02d", mon, day);
 
-        root["food"] = date;
-        root["ispublic"] = true;
-        root["ts"] = t;
+    root["food"] = date;
+    root["ispublic"] = true;
+    root["ts"] = t;
 
-        // Now print the JSON into a char buffer
-        root.printTo(buffer, sizeof(buffer));
+    // Now print the JSON into a char buffer
+    serializeJson(root, buffer);
 
-        // Now publish the char buffer to Beebotte
-        client.publish(topicFood, buffer, QoS);
-        break;
-      }
-    case JIKI_PTN6:
-      break;
+    // Now publish the char buffer to Beebotte
+    client.publish(topicFood, buffer, QoS);
+    break;
+  }
+  case JIKI_PTN6:
+    break;
   }
 
   MsgPublishData = String(buffer);
   Serial.println(MsgPublishData);
-
 }
 
 //date
 #include <time.h>
-#define JST     3600*9
+#define JST 3600 * 9
 
-void setup() {
+void setup()
+{
 
   Serial.begin(115200);
   M5.begin();
@@ -242,7 +244,7 @@ void setup() {
   client.setServer(BBT, 1883);
 
   //date
-  configTime( JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
+  configTime(JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
 
   BtnAniCnt = 0;
   MqttCnt = 0;
@@ -251,39 +253,42 @@ void setup() {
   sleepCnt = 0;
 }
 
-
-
-
-
-void loopDisplay() {
+void loopDisplay()
+{
 
   //IPアドレス
   IPAddress ip = WiFi.localIP();
   ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
 
   //ユーザー向けの情報
-  if (++BtnAniCnt > 10) BtnAniCnt = 0;
-  if (nowStatus == STATUS_NONE) {
+  if (++BtnAniCnt > 10)
+    BtnAniCnt = 0;
+  if (nowStatus == STATUS_NONE)
+  {
     //何もなし
   }
 
   //キューブを置いている段階 or ボタンを押したとき
-  if (nowStatus == STATUS_TAIKI || nowStatus == STATUS_BTN_ON) {
+  if (nowStatus == STATUS_TAIKI || nowStatus == STATUS_BTN_ON)
+  {
     //次のMQTT送信向けに変数を初期化しておく
     MqttCnt = 0;
   }
 
   //MQTTにパブリッシュ中
-  if (nowStatus == STATUS_MQTT_SUC) {
+  if (nowStatus == STATUS_MQTT_SUC)
+  {
   }
 }
 
-void loopJikiSensor() {
+void loopJikiSensor()
+{
   //データ保存と平均値の算出
   int _v = analogRead(PIN_JIKI);
   //Serial.println(_v);
   jikiAvg = 0;
-  for (int i = 0; i < JIKI_SIZE - 1; i++) {
+  for (int i = 0; i < JIKI_SIZE - 1; i++)
+  {
     jiki[i] = jiki[i + 1];
     jikiAvg += jiki[i + 1];
   }
@@ -293,31 +298,38 @@ void loopJikiSensor() {
   jikiAvg /= JIKI_SIZE;
 
   //パターンの判定
-  if (jikiAvg >= jikiPtnDef[0] && jikiAvg <= jikiPtnDef[1]) {
+  if (jikiAvg >= jikiPtnDef[0] && jikiAvg <= jikiPtnDef[1])
+  {
     jikiPtn = JIKI_DEF;
     return;
   }
-  if (jikiAvg >= jikiPtn1[0] && jikiAvg <= jikiPtn1[1]) {
+  if (jikiAvg >= jikiPtn1[0] && jikiAvg <= jikiPtn1[1])
+  {
     jikiPtn = JIKI_PTN1;
     return;
   }
-  if (jikiAvg >= jikiPtn2[0] && jikiAvg <= jikiPtn2[1]) {
+  if (jikiAvg >= jikiPtn2[0] && jikiAvg <= jikiPtn2[1])
+  {
     jikiPtn = JIKI_PTN2;
     return;
   }
-  if (jikiAvg >= jikiPtn3[0] && jikiAvg <= jikiPtn3[1]) {
+  if (jikiAvg >= jikiPtn3[0] && jikiAvg <= jikiPtn3[1])
+  {
     jikiPtn = JIKI_PTN3;
     return;
   }
-  if (jikiAvg >= jikiPtn4[0] && jikiAvg <= jikiPtn4[1]) {
+  if (jikiAvg >= jikiPtn4[0] && jikiAvg <= jikiPtn4[1])
+  {
     jikiPtn = JIKI_PTN4;
     return;
   }
-  if (jikiAvg >= jikiPtn5[0] && jikiAvg <= jikiPtn5[1]) {
+  if (jikiAvg >= jikiPtn5[0] && jikiAvg <= jikiPtn5[1])
+  {
     jikiPtn = JIKI_PTN5;
     return;
   }
-  if (jikiAvg >= jikiPtn6[0] && jikiAvg <= jikiPtn6[1]) {
+  if (jikiAvg >= jikiPtn6[0] && jikiAvg <= jikiPtn6[1])
+  {
     jikiPtn = JIKI_PTN6;
     return;
   }
@@ -327,59 +339,72 @@ void loopJikiSensor() {
   return;
 }
 
-void loopBtn() {
+void loopBtn()
+{
   bool btn = digitalRead(PIN_BTN);
 
   //チャタリング対策
   //押したとき複数回認識してからONにする
-  if (btn) {
-    if (++btnCnt >= BTN_CNT) {
+  if (btn)
+  {
+    if (++btnCnt >= BTN_CNT)
+    {
       btn = true;
       btnCnt = BTN_CNT;
-    } else {
+    }
+    else
+    {
       btn = false;
     }
   }
 
   //MQTT送信中の時はボタンを無効にする
-  if (nowStatus == STATUS_MQTT_SUC) return;
+  if (nowStatus == STATUS_MQTT_SUC)
+    return;
 
-  if (btnPtn == BTN_OFF && btn) {
+  if (btnPtn == BTN_OFF && btn)
+  {
     btnPtn = BTN_DOWN;
     return;
   }
 
-  if (btnPtn == BTN_DOWN && !btn) {
+  if (btnPtn == BTN_DOWN && !btn)
+  {
     btnPtn = BTN_OFF;
     nowStatus = STATUS_BTN_ON;
     return;
   }
-
 }
 
-
-void loopMQTT() {
-  if (!client.connected()) reconnect();
+void loopMQTT()
+{
+  if (!client.connected())
+    reconnect();
   //送信中の待ち
-  if (nowStatus == STATUS_MQTT_SUC) {
+  if (nowStatus == STATUS_MQTT_SUC)
+  {
     unsigned long _t = millis();
-    if ( abs(_t - waitingTime) >= WAIT_MQTT_PUBLISH) {
+    if (abs(_t - waitingTime) >= WAIT_MQTT_PUBLISH)
+    {
       nowStatus = STATUS_TAIKI;
     }
     return;
   }
 
   //ボタンを押した直後
-  if (nowStatus == STATUS_BTN_ON) {
+  if (nowStatus == STATUS_BTN_ON)
+  {
 
     //どの面が上なのか分からない
-    if (jikiPtn == JIKI_NONE) {
+    if (jikiPtn == JIKI_NONE)
+    {
       nowStatus = STATUS_TAIKI;
       return;
     }
 
     //接続できていない。
-    if (!client.connected()) {
+    if (!client.connected())
+    {
       nowStatus = STATUS_TAIKI;
       return;
     }
@@ -390,12 +415,13 @@ void loopMQTT() {
   }
 }
 
-
-void loop() {
+void loop()
+{
 
   //Sleep
   interval<LOOPTIME_SLEEP_CNT>::run([] {
-    if (++sleepCnt >= SLEEP_CNT_S) {
+    if (++sleepCnt >= SLEEP_CNT_S)
+    {
     }
   });
 
@@ -420,5 +446,4 @@ void loop() {
   });
 
   M5.update();
-
 }
