@@ -23,7 +23,6 @@
 #define LOOPTIME_JIKI 30000
 #define LOOPTIME_BTN 50000
 #define LOOPTIME_MQTT 500000
-#define LOOPTIME_SLEEP_CNT 1000000
 
 //ステータス
 #define STATUS_NONE "NONE"
@@ -44,14 +43,12 @@ char *password = "[パスワード]";
 const String host = "[プロジェクト名].cloudfunctions.net";
 googleCloudFunctions cfs;
 
-//++++++++++++++++++++++++++++++++++++++++++++
-//スリープ
-//++++++++++++++++++++++++++++++++++++++++++++
-const unsigned int SLEEP_CNT_S = 3600; //スリープに入るまでのカウント(秒)
-unsigned int sleepCnt;
+//date
+#include <time.h>
+#define JST 3600 * 9
 
 //++++++++++++++++++++++++++++++++++++++++++++
-//磁気センサ
+//磁気センサ(キューブ)
 //++++++++++++++++++++++++++++++++++++++++++++
 #define JIKI_DEF 0
 #define JIKI_PTN1 1
@@ -78,32 +75,20 @@ int jikiAvg;
 int jikiPtn = JIKI_NONE;
 
 //++++++++++++++++++++++++++++++++++++++++++++
-//ボタン
+//磁気センサ(ボタン)
 //++++++++++++++++++++++++++++++++++++++++++++
-#define BTN_OFF 0
-#define BTN_DOWN 1
-int btnPtn = BTN_OFF;
-#define BTN_CNT 5 //チャタリング対策
+#define jikiBtn 2100 //ONと判断する閾値
+#define BTN_CNT 5    //チャタリング対策
 int btnCnt = 0;
-
-//++++++++++++++++++++++++++++++++++++++++++++
-//ディスプレイ
-//++++++++++++++++++++++++++++++++++++++++++++
-String ipStr;
-String MsgMqtt;
-String MsgPublishData;
-int BtnAniCnt;
-int MqttCnt;
 
 //++++++++++++++++++++++++++++++++++++++++++++
 //MQTT
 //++++++++++++++++++++++++++++++++++++++++++++
 #define BBT "mqtt.beebotte.com"
 #define QoS 2
-
 char *topicUser = "CubeButton/user";
 char *topicFood = "CubeButton/food";
-String bbt_token;
+String bbt_token = "";
 WiFiClient espClient;
 PubSubClient client(espClient);
 
@@ -196,13 +181,8 @@ void publish()
     break;
   }
 
-  MsgPublishData = String(buffer);
-  Serial.println(MsgPublishData);
+  Serial.println(String(buffer));
 }
-
-//date
-#include <time.h>
-#define JST 3600 * 9
 
 void setup()
 {
@@ -245,24 +225,10 @@ void setup()
 
   //date
   configTime(JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
-
-  BtnAniCnt = 0;
-  MqttCnt = 0;
-
-  //スリープ
-  sleepCnt = 0;
 }
 
 void loopDisplay()
 {
-
-  //IPアドレス
-  IPAddress ip = WiFi.localIP();
-  ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
-
-  //ユーザー向けの情報
-  if (++BtnAniCnt > 10)
-    BtnAniCnt = 0;
   if (nowStatus == STATUS_NONE)
   {
     //何もなし
@@ -271,8 +237,6 @@ void loopDisplay()
   //キューブを置いている段階 or ボタンを押したとき
   if (nowStatus == STATUS_TAIKI || nowStatus == STATUS_BTN_ON)
   {
-    //次のMQTT送信向けに変数を初期化しておく
-    MqttCnt = 0;
   }
 
   //MQTTにパブリッシュ中
@@ -341,38 +305,26 @@ void loopJikiSensor()
 
 void loopBtn()
 {
-  bool btn = digitalRead(PIN_BTN);
+  //待機以外の時はボタンを無効にする
+  if (nowStatus != STATUS_TAIKI)
+  {
+    btnCnt = 0;
+    return;
+  }
 
-  //チャタリング対策
-  //押したとき複数回認識してからONにする
-  if (btn)
+  int btn = digitalRead(PIN_BTN);
+
+  //閾値を超えた複数回認識してからONにする
+  if (btn > jikiBtn)
   {
     if (++btnCnt >= BTN_CNT)
     {
-      btn = true;
-      btnCnt = BTN_CNT;
-    }
-    else
-    {
-      btn = false;
+      nowStatus = STATUS_BTN_ON;
     }
   }
-
-  //MQTT送信中の時はボタンを無効にする
-  if (nowStatus == STATUS_MQTT_SUC)
-    return;
-
-  if (btnPtn == BTN_OFF && btn)
+  else
   {
-    btnPtn = BTN_DOWN;
-    return;
-  }
-
-  if (btnPtn == BTN_DOWN && !btn)
-  {
-    btnPtn = BTN_OFF;
-    nowStatus = STATUS_BTN_ON;
-    return;
+    btnCnt = 0;
   }
 }
 
@@ -380,6 +332,7 @@ void loopMQTT()
 {
   if (!client.connected())
     reconnect();
+
   //送信中の待ち
   if (nowStatus == STATUS_MQTT_SUC)
   {
@@ -417,14 +370,6 @@ void loopMQTT()
 
 void loop()
 {
-
-  //Sleep
-  interval<LOOPTIME_SLEEP_CNT>::run([] {
-    if (++sleepCnt >= SLEEP_CNT_S)
-    {
-    }
-  });
-
   //JikiSensor
   interval<LOOPTIME_JIKI>::run([] {
     loopJikiSensor();
