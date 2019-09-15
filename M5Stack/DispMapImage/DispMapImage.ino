@@ -21,7 +21,7 @@ String oldGetAxis;
 
 //http
 const String host = "[プロジェクト名].cloudfunctions.net";
-const String function = "/GPSMap_getMapBinary";
+const String function = "GPSMap_getMapBinary";
 const int httpsPort = 443;
 const String apikey = "";
 
@@ -154,7 +154,7 @@ void dispImage()
 void drawImage(String _postData, String _trimNo, int _posX, int _posY)
 {
   _postData.replace("@", _trimNo);
-  String retImage = cfs.callCloudFunctions_String(host, "GPSMap_getMapBinary", _postData);
+  String retImage = cfs.callCloudFunctions_String(host, function, _postData);
   int len = retImage.length();
   Serial.print(F("[Get Data] Size : "));
   Serial.println(len);
