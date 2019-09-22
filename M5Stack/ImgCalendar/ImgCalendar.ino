@@ -8,10 +8,10 @@
 
 //Wifi
 char *ssid = "Buffalo-G-36F0";
-char *password = "[パスワード]";
+//char *password = "[パスワード]";
 
 //http
-const String host = "[プロジェクト名].cloudfunctions.net";
+//const String host = "[プロジェクト名].cloudfunctions.net";
 const String function = "getDriveImage_M5stack";
 const int httpsPort = 443;
 
@@ -31,11 +31,13 @@ const uint8_t buttonC_GPIO = 37;
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-void dispImage()
+void dispImage(String imgFile)
 {
   //httpリクエストで画像(バイナリデータ)を取得
   String postData = "{ \"drive\" : ";
-  postData += "{\"img\" : \"imgCalendar.jpeg\",";
+  postData += "{\"img\" : \"";
+  postData += imgFile;
+  postData += "\",";
   postData += "\"trim\" : \"@\"";
   postData += "}}";
 
@@ -102,31 +104,32 @@ void setup()
 
 }
 
-void draw()
+void draw(String imgFile)
 {
     M5.Lcd.fillScreen(BLACK); // CLEAR SCREEN
     M5.Lcd.setCursor(50, 120);
     M5.Lcd.setTextSize(2);
     M5.Lcd.setTextColor(ORANGE);
     M5.Lcd.print("Calendar Updating...");
-    dispImage();
+    dispImage(imgFile);
 }
 
 void loop()
 {
   //画像の表示
   interval<LOOPTIME_CALENDAR>::run([] {
-    draw();
+    draw("imgCalendar.jpeg");
   });
 
   //デバッグ用
   if (M5.BtnA.wasPressed())
   {
-    draw();
+    draw("imgCalendar.jpeg");
   }
 
   if (M5.BtnB.wasPressed())
   {
+    draw("imgCalendar_Demo.jpeg");
   }
 
   if (M5.BtnC.wasPressed())
