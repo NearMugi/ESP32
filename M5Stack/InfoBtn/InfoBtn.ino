@@ -25,9 +25,6 @@ const uint8_t buttonA_GPIO = 39;
 const uint8_t buttonB_GPIO = 38;
 const uint8_t buttonC_GPIO = 37;
 
-//LoopTime(us)
-#define LOOPTIME_CALENDAR  10 * 60 * 1000 * 1000
-
 WiFiClient espClient;
 PubSubClient client(espClient);
 
@@ -102,38 +99,35 @@ void setup()
   pinMode(buttonB_GPIO, INPUT);
   pinMode(buttonC_GPIO, INPUT);
 
+  // 初期画面
+  draw("imgCalendar.jpeg", "Calendar");
 }
 
-void draw(String imgFile)
+void draw(String imgFile, String msg)
 {
     M5.Lcd.fillScreen(BLACK); // CLEAR SCREEN
     M5.Lcd.setCursor(50, 120);
     M5.Lcd.setTextSize(2);
     M5.Lcd.setTextColor(ORANGE);
-    M5.Lcd.print("Updating...");
+    M5.Lcd.print(msg + " Updating...");
     dispImage(imgFile);
 }
 
 void loop()
 {
-  //画像の表示
-  interval<LOOPTIME_CALENDAR>::run([] {
-    draw("imgCalendar.jpeg");
-  });
-
   if (M5.BtnA.wasPressed())
   {
-    draw("imgCalendar.jpeg");
+    draw("imgCalendar.jpeg", "Calendar");
   }
 
   if (M5.BtnB.wasPressed())
   {
-    draw("imgWeather.jpeg");
+    draw("imgWeather.jpeg", "Weather");
   }
 
   if (M5.BtnC.wasPressed())
   {
-    draw("imgCalendar_Demo.jpeg");
+    draw("imgCalendar_Demo.jpeg", "Demo");
   }
 
   M5.update();
