@@ -100,7 +100,7 @@ void setup()
   pinMode(buttonC_GPIO, INPUT);
 
   // 初期画面
-  draw("imgCalendar.jpeg", "Calendar");
+  draw("imgWeather.jpeg", "Weather");
 }
 
 void draw(String imgFile, String msg)
