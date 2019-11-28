@@ -40,13 +40,15 @@ void dispImage(String imgFile)
 
   Serial.println(F("draw ImageData"));
   drawImage(postData, "1", 0, 0);
-  drawImage(postData, "2", 80, 0);
-  drawImage(postData, "3", 160, 0);
-  drawImage(postData, "4", 240, 0);
-
   drawImage(postData, "5", 0, 120);
+
+  drawImage(postData, "2", 80, 0);
   drawImage(postData, "6", 80, 120);
+
+  drawImage(postData, "3", 160, 0);
   drawImage(postData, "7", 160, 120);
+
+  drawImage(postData, "4", 240, 0);
   drawImage(postData, "8", 240, 120);
 }
 
@@ -105,12 +107,12 @@ void setup()
 
 void draw(String imgFile, String msg)
 {
-    M5.Lcd.fillScreen(BLACK); // CLEAR SCREEN
-    M5.Lcd.setCursor(50, 120);
-    M5.Lcd.setTextSize(2);
-    M5.Lcd.setTextColor(ORANGE);
-    M5.Lcd.print(msg + " Updating...");
-    dispImage(imgFile);
+  M5.Lcd.fillScreen(BLACK); // CLEAR SCREEN
+  M5.Lcd.setCursor(50, 120);
+  M5.Lcd.setTextSize(2);
+  M5.Lcd.setTextColor(ORANGE);
+  M5.Lcd.print(msg + " Updating...");
+  dispImage(imgFile);
 }
 
 void loop()
