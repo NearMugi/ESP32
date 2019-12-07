@@ -7,8 +7,8 @@ NefrySetting nefrySetting(setting);
 
 
 // Motor setting
-#define PIN_MOTOR A0
-#define PIN_MOTOR_RE A1
+#define PIN_MOTOR D0
+#define PIN_MOTOR_RE D1
 #define MOTOR_CH 0
 
 #define DELAY_TIME 1000
