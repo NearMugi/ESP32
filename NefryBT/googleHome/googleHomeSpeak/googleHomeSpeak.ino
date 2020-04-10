@@ -10,6 +10,11 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include <time.h>
+#include <HTTPClient.h>
+#include <base64.h>
+#include <FS.h>
+#include <SPIFFS.h>
+#include <esp8266-google-home-notifier.h>
 
 #include <NefrySetting.h>
 void setting()
@@ -25,13 +30,16 @@ NefrySetting nefrySetting(setting);
 #define googleHomeIPIdx 1
 #define googleHomeIPTag "GoogleHome_IP"
 
-#define voiceTextAPIKeyIdx 2
+#define googleHomeRoomIdx 2
+#define googleHomeRoomTag "GoogleHome_RoomName"
+
+#define voiceTextAPIKeyIdx 3
 #define voiceTextAPIKeyTag "VoiceTextAPI_Key"
 
-#define mqttStartCharIdx 3
+#define mqttStartCharIdx 4
 #define mqttStartCharTag "MQTT_StartChar"
 
-#define mqttEndCharIdx 4
+#define mqttEndCharIdx 5
 #define mqttEndCharTag "MQTT_EndChar"
 
 // MQTT
@@ -49,11 +57,21 @@ String getTopic;
 char getPayload[MAX_MSGSIZE];
 String getWord;
 
+// VoiceText Web API
+const String tts_url = "https://api.voicetext.jp/v1/tts";
+String tts_user = "";
+const String tts_pass = "";
+const String mp3file = "test.mp3";
+String tts_parms = "&speaker=hikari&volume=200&speed=120&format=mp3";
+
 // GoogleHome
 String startChar;
 String endChar;
 String sendMessage;
 bool sendTrigger;
+GoogleHomeNotifier ghn;
+const char displayName[] = "ファミリー ルーム";
+String googleHomeIPStr; //ipアドレス
 
 //NefryDisplayMessage
 String msgIsConnect;
@@ -133,14 +151,95 @@ void callback(char *topic, byte *payload, unsigned int length)
     }
 }
 
+// text to speech
+void text2speech(String text)
+{
+
+    HTTPClient http; // Initialize the client library
+    size_t size = 0; // available streaming data size
+
+    http.begin(tts_url); //Specify the URL
+
+    Serial.println();
+    Serial.println("Starting connection to tts server...");
+
+    //request header for VoiceText Web API
+    String auth = base64::encode(tts_user + ":" + tts_pass);
+    http.addHeader("Authorization", "Basic " + auth);
+    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+    String request = String("text=") + URLEncode(text.c_str()) + tts_parms;
+    http.addHeader("Content-Length", String(request.length()));
+
+    SPIFFS.begin();
+    File f = SPIFFS.open("/" + mp3file, FILE_WRITE);
+    if (f)
+    {
+        //Make the request
+        int httpCode = http.POST(request);
+        if (httpCode > 0)
+        {
+            if (httpCode == HTTP_CODE_OK)
+            {
+                http.writeToStream(&f);
+
+                String mp3url = "http://" + ipStr + "/" + mp3file;
+                Serial.println("GoogleHomeNotifier.play() start");
+                if (ghn.play(mp3url.c_str()) != true)
+                {
+                    Serial.print("GoogleHomeNotifier.play() error:");
+                    Serial.println(ghn.getLastError());
+                    return;
+                }
+            }
+        }
+        else
+        {
+            Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
+        }
+        f.close();
+    }
+    else
+    {
+        Serial.println("SPIFFS open error!!");
+    }
+    http.end();
+    SPIFFS.end();
+}
+
+// from http://hardwarefun.com/tutorials/url-encoding-in-arduino
+// modified by chaeplin
+String URLEncode(const char *msg)
+{
+    const char *hex = "0123456789ABCDEF";
+    String encodedMsg = "";
+
+    while (*msg != '\0')
+    {
+        if (('a' <= *msg && *msg <= 'z') || ('A' <= *msg && *msg <= 'Z') ||
+            ('0' <= *msg && *msg <= '9') || *msg == '-' || *msg == '_' || *msg == '.' || *msg == '~')
+        {
+            encodedMsg += *msg;
+        }
+        else
+        {
+            encodedMsg += '%';
+            encodedMsg += hex[*msg >> 4];
+            encodedMsg += hex[*msg & 0xf];
+        }
+        msg++;
+    }
+    return encodedMsg;
+}
+
 void DispNefryDisplay()
 {
     NefryDisplay.clear();
 
+    String tmpGoogleHomeIP = "GoogleHome:" + googleHomeIPStr;
     NefryDisplay.setFont(ArialMT_Plain_10);
     NefryDisplay.drawString(0, 0, ipStr);
-    NefryDisplay.drawString(0, 12, msgIsConnect);
-    NefryDisplay.drawString(0, 24, "[Get Time]");
+    NefryDisplay.drawString(0, 12, tmpGoogleHomeIP);
+    NefryDisplay.drawString(0, 24, msgIsConnect);
     NefryDisplay.drawString(0, 36, (String)ctime(&getTs));
 
     NefryDisplay.display();
@@ -152,6 +251,7 @@ void setup()
     Nefry.setProgramName("GoogleHome speaks MQTT Msg");
     Nefry.setStoreTitle(beebotteTokenTag, beebotteTokenIdx);
     Nefry.setStoreTitle(googleHomeIPTag, googleHomeIPIdx);
+    Nefry.setStoreTitle(googleHomeRoomTag, googleHomeRoomIdx);
     Nefry.setStoreTitle(voiceTextAPIKeyTag, voiceTextAPIKeyIdx);
     Nefry.setStoreTitle(mqttStartCharTag, mqttStartCharIdx);
     Nefry.setStoreTitle(mqttEndCharTag, mqttEndCharIdx);
@@ -171,11 +271,28 @@ void setup()
     client.setCallback(callback);
     sprintf(topic, "%s/%s", Channel, Res);
 
+    // VoiceText API
+    tts_user = Nefry.getStoreStr(voiceTextAPIKeyIdx);
+
     // GoogleHome
     startChar = Nefry.getStoreStr(mqttStartCharIdx);
     endChar = Nefry.getStoreStr(mqttEndCharIdx);
     sendMessage = "";
     sendTrigger = false;
+
+    Serial.println("connecting to Google Home...");
+    if (ghn.device(displayName, "ja") != true)
+    {
+        Serial.println(ghn.getLastError());
+        return;
+    }
+    IPAddress tmpIP = ghn.getIPAddress();
+    googleHomeIPStr = String(tmpIP[0]) + '.' + String(tmpIP[1]) + '.' + String(tmpIP[2]) + '.' + String(tmpIP[3]);
+    Serial.print("found Google Home(");
+    Serial.print(googleHomeIPStr);
+    Serial.print(":");
+    Serial.print(ghn.getPort());
+    Serial.println(")");
 }
 
 void loop()
@@ -187,6 +304,8 @@ void loop()
     {
         Serial.println("Message Send To GoogleHome");
         Serial.println(sendMessage);
+        text2speech(sendMessage);
+
         sendMessage = "";
         sendTrigger = false;
     }
