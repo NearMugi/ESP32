@@ -70,7 +70,7 @@ String endChar;
 String sendMessage;
 bool sendTrigger;
 GoogleHomeNotifier ghn;
-const char displayName[] = "ファミリー ルーム";
+char displayName[] = "";
 String googleHomeIPStr; //ipアドレス
 
 //NefryDisplayMessage
@@ -201,10 +201,16 @@ void text2speech(String msg)
         }
     }
 
-    delay(1000);
+    delay(2000);
+
+    SPIFFS.begin();
+    File fsInit = SPIFFS.open(mp3file, FILE_WRITE);
+    fsInit.print("");
+    fsInit.close();
+    SPIFFS.end();
 
     // SPIFFSにmp3ファイルを生成
-    SPIFFS.begin(true);
+    SPIFFS.begin();
     File fs = SPIFFS.open(mp3file, FILE_WRITE);
     if (!fs)
     {
@@ -328,12 +334,17 @@ void setup()
     Nefry.getWebServer()->on(mp3file.c_str(), handlePlay);
 
     // GoogleHome
+    String tmpRoom = Nefry.getStoreStr(googleHomeRoomIdx);
+    tmpRoom.toCharArray(displayName, tmpRoom.length() + 1);
     startChar = Nefry.getStoreStr(mqttStartCharIdx);
     endChar = Nefry.getStoreStr(mqttEndCharIdx);
     sendMessage = "";
     sendTrigger = false;
 
-    Serial.println("connecting to Google Home...");
+    Serial.print(F("connecting to Google Home["));
+    Serial.print(displayName);
+    Serial.println(F("]..."));
+
     if (ghn.device(displayName, "ja") != true)
     {
         Serial.println(ghn.getLastError());
@@ -348,8 +359,8 @@ void setup()
     Serial.println(")");
 
     // Debug
-    sendMessage = "これはテストです。";
-    text2speech(sendMessage);
+    //sendMessage = "これはテストです。";
+    //sendTrigger = true;
 }
 
 void loop()
