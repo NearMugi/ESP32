@@ -10,7 +10,7 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include <time.h>
-#include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include <base64.h>
 #include <FS.h>
 #include <SPIFFS.h>
@@ -58,10 +58,10 @@ char getPayload[MAX_MSGSIZE];
 String getWord;
 
 // VoiceText Web API
-const String tts_url = "https://api.voicetext.jp/v1/tts";
+const String tts_url = "https://api.voicetext.jp";
 String tts_user = "";
 const String tts_pass = "";
-const String mp3file = "test.mp3";
+const String mp3file = "/tmp.mp3";
 String tts_parms = "&speaker=hikari&volume=200&speed=120&format=mp3";
 
 // GoogleHome
@@ -100,7 +100,7 @@ void reconnect()
     else
     {
         Serial.print("failed, rc=");
-        Serial.print(client.state());
+        Serial.println(client.state());
         msgIsConnect = "Mqtt DisConnected";
     }
 }
@@ -152,58 +152,100 @@ void callback(char *topic, byte *payload, unsigned int length)
 }
 
 // text to speech
-void text2speech(String text)
+void text2speech(String msg)
 {
+    // VoiceTextAPIにPOST
+    String tmpURL = "api.voicetext.jp";
+    const char *host = tmpURL.c_str();
+    const int httpsPort = 443;
 
-    HTTPClient http; // Initialize the client library
-    size_t size = 0; // available streaming data size
-
-    http.begin(tts_url); //Specify the URL
-
-    Serial.println();
-    Serial.println("Starting connection to tts server...");
-
-    //request header for VoiceText Web API
+    String postData = String("text=") + URLEncode(msg.c_str()) + tts_parms;
     String auth = base64::encode(tts_user + ":" + tts_pass);
-    http.addHeader("Authorization", "Basic " + auth);
-    http.addHeader("Content-Type", "application/x-www-form-urlencoded");
-    String request = String("text=") + URLEncode(text.c_str()) + tts_parms;
-    http.addHeader("Content-Length", String(request.length()));
 
-    SPIFFS.begin();
-    File f = SPIFFS.open("/" + mp3file, FILE_WRITE);
-    if (f)
-    {
-        //Make the request
-        int httpCode = http.POST(request);
-        if (httpCode > 0)
-        {
-            if (httpCode == HTTP_CODE_OK)
-            {
-                http.writeToStream(&f);
+    String postHeader = "";
+    postHeader += "POST /v1/tts?@postData HTTP/1.1\r\n";
+    postHeader += "Host: @host:@httpsPort\r\n";
+    postHeader += "Authorization: Basic @auth\r\n";
+    postHeader += "Connection: close\r\n";
+    postHeader += "Content-Type: application/x-www-form-urlencoded\r\n";
+    postHeader += "\r\n";
 
-                String mp3url = "http://" + ipStr + "/" + mp3file;
-                Serial.println("GoogleHomeNotifier.play() start");
-                if (ghn.play(mp3url.c_str()) != true)
-                {
-                    Serial.print("GoogleHomeNotifier.play() error:");
-                    Serial.println(ghn.getLastError());
-                    return;
-                }
-            }
-        }
-        else
-        {
-            Serial.printf("[HTTP] GET... failed, error: %s\n", http.errorToString(httpCode).c_str());
-        }
-        f.close();
-    }
-    else
+    postHeader.replace("@host", String(host));
+    postHeader.replace("@httpsPort", String(httpsPort));
+    postHeader.replace("@auth", auth);
+    postHeader.replace("@postData", postData);
+
+    WiFiClientSecure clientVoiceText;
+    Serial.print(F("Connecting to: "));
+    Serial.println(host);
+    if (!clientVoiceText.connect(host, httpsPort))
     {
-        Serial.println("SPIFFS open error!!");
+        Serial.println(F("failed..."));
+        return;
     }
-    http.end();
+    Serial.println(F("Success!"));
+
+    // POST
+    clientVoiceText.print(postHeader);
+
+    delay(10);
+
+    // レスポンス待ち
+    while (clientVoiceText.connected())
+    {
+        String line = clientVoiceText.readStringUntil('\n');
+        if (line == "\r")
+        {
+            Serial.println(F("headers received"));
+            break;
+        }
+    }
+
+    delay(1000);
+
+    // SPIFFSにmp3ファイルを生成
+    SPIFFS.begin(true);
+    File fs = SPIFFS.open(mp3file, FILE_WRITE);
+    if (!fs)
+    {
+        Serial.println(F("SPIFFS open error!!"));
+        return;
+    }
+    // データを読み取る
+    int len = 0;
+    while (clientVoiceText.available())
+    {
+        char c = clientVoiceText.read();
+        //Serial.print(String(c, HEX));
+        //Serial.print(" ");
+        //Serial.print(c);
+        fs.print(c);
+        len++;
+    }
+    clientVoiceText.stop();
+
+    Serial.print(F("\nRead Count : "));
+    Serial.println(len);
+    fs.close();
+
+    fs = SPIFFS.open(mp3file, FILE_READ);
+    Serial.print(F("mp3 Data Size : "));
+    Serial.println(fs.size());
+    fs.close();
+
+    // GoogleHomeに送信
+    String mp3url = "http://" + ipStr + mp3file;
+    Serial.println(F("GoogleHome start"));
+    Serial.println(mp3url.c_str());
+    if (ghn.play(mp3url.c_str()) != true)
+    {
+        Serial.println(F("failed..."));
+        Serial.println(ghn.getLastError());
+    }
+    Serial.println(F("Success!"));
+
     SPIFFS.end();
+    Serial.println(F("client stop"));
 }
 
 // from http://hardwarefun.com/tutorials/url-encoding-in-arduino
@@ -229,6 +271,16 @@ String URLEncode(const char *msg)
         msg++;
     }
     return encodedMsg;
+}
+
+void handlePlay()
+{
+    SPIFFS.begin(true);
+    File file = SPIFFS.open(mp3file, FILE_READ);
+    Serial.println("handlePlay: sending " + mp3file + ":" + file.size());
+    Nefry.getWebServer()->ESP32WebServer::streamFile(file, "audio/mp3");
+    file.close();
+    SPIFFS.end();
 }
 
 void DispNefryDisplay()
@@ -273,6 +325,7 @@ void setup()
 
     // VoiceText API
     tts_user = Nefry.getStoreStr(voiceTextAPIKeyIdx);
+    Nefry.getWebServer()->on(mp3file.c_str(), handlePlay);
 
     // GoogleHome
     startChar = Nefry.getStoreStr(mqttStartCharIdx);
@@ -293,6 +346,10 @@ void setup()
     Serial.print(":");
     Serial.print(ghn.getPort());
     Serial.println(")");
+
+    // Debug
+    sendMessage = "これはテストです。";
+    text2speech(sendMessage);
 }
 
 void loop()
