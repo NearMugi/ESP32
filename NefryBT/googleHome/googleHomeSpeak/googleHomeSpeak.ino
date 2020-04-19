@@ -131,8 +131,8 @@ void callback(char *topic, byte *payload, unsigned int length)
 
     getWord = root["data"].as<String>();
     getTs = time(NULL);
-    Serial.println(getWord);
-    Serial.println((String)ctime(&getTs));
+    //Serial.println(getWord);
+    //Serial.println((String)ctime(&getTs));
 
     sendTrigger = false;
     if (getWord == startChar)
@@ -177,61 +177,64 @@ void text2speech(String msg)
 
     WiFiClientSecure clientVoiceText;
     Serial.print(F("Connecting to: "));
-    Serial.println(host);
+    Serial.print(host);
     if (!clientVoiceText.connect(host, httpsPort))
     {
-        Serial.println(F("failed..."));
+        Serial.println(F(" Failed..."));
         return;
     }
-    Serial.println(F("Success!"));
+    Serial.println(F(" Success!"));
 
     // POST
     clientVoiceText.print(postHeader);
+    clientVoiceText.flush();
 
     delay(10);
-
-    // レスポンス待ち
-    while (clientVoiceText.connected())
-    {
-        String line = clientVoiceText.readStringUntil('\n');
-        if (line == "\r")
-        {
-            Serial.println(F("headers received"));
-            break;
-        }
-    }
-
-    delay(2000);
-
-    SPIFFS.begin();
-    File fsInit = SPIFFS.open(mp3file, FILE_WRITE);
-    fsInit.print("");
-    fsInit.close();
-    SPIFFS.end();
 
     // SPIFFSにmp3ファイルを生成
     SPIFFS.begin();
     File fs = SPIFFS.open(mp3file, FILE_WRITE);
-    if (!fs)
+
+    unsigned long contentLength = 0;
+    while (clientVoiceText.connected())
     {
-        Serial.println(F("SPIFFS open error!!"));
-        return;
-    }
-    // データを読み取る
-    int len = 0;
-    while (clientVoiceText.available())
-    {
-        char c = clientVoiceText.read();
-        //Serial.print(String(c, HEX));
-        //Serial.print(" ");
-        //Serial.print(c);
-        fs.print(c);
-        len++;
+        String line = clientVoiceText.readStringUntil('\n');
+        if (line.indexOf("Content-Length: ") >= 0)
+        {
+            String tmp = line.substring(line.indexOf(":") + 1);
+            contentLength = tmp.toInt();
+        }
+        Serial.print(line);
+
+        if (line == "\r")
+        {
+            Serial.println(F("headers received"));
+            //Serial.println(clientVoiceText.available());
+
+            // データを読み取る
+            Serial.print(F("Read Data Size : "));
+            Serial.println(contentLength);
+            //※clientVoiceText.available()>0で判定すると全てのデータを取得できない。
+            //  一度ゼロになって、またデータを取得するような動きになる。
+            //　そのためデータ数分(Content-Length)取得する処理にする。
+            time_t startTime = time(NULL);
+            int limitTime = 0;
+            while (contentLength > 0 && limitTime < 10)
+            {
+                limitTime = (unsigned long)(time(NULL) - startTime);
+                if (clientVoiceText.available())
+                {
+                    char c = clientVoiceText.read();
+                    fs.print(c);
+                    contentLength--;
+                }
+            }
+            Serial.print(F("Read Time : "));
+            Serial.println(limitTime);
+            break;
+        }
     }
     clientVoiceText.stop();
-
-    Serial.print(F("\nRead Count : "));
-    Serial.println(len);
     fs.close();
 
     fs = SPIFFS.open(mp3file, FILE_READ);
