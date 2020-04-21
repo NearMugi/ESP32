@@ -62,7 +62,7 @@ const String tts_url = "https://api.voicetext.jp";
 String tts_user = "";
 const String tts_pass = "";
 const String mp3file = "/tmp.mp3";
-String tts_parms = "&speaker=hikari&volume=200&speed=120&format=mp3";
+String tts_parms = "&speaker=hikari&volume=200&speed=100&format=mp3";
 
 // GoogleHome
 String startChar;
@@ -185,6 +185,8 @@ void text2speech(String msg)
     }
     Serial.println(F(" Success!"));
 
+    Nefry.setLed(0, 0, 255);
+
     // POST
     clientVoiceText.print(postHeader);
     clientVoiceText.flush();
@@ -255,6 +257,7 @@ void text2speech(String msg)
 
     SPIFFS.end();
     Serial.println(F("client stop"));
+    Nefry.setLed(0, 0, 0);
 }
 
 // from http://hardwarefun.com/tutorials/url-encoding-in-arduino
@@ -316,6 +319,7 @@ void setup()
     Nefry.setStoreTitle(voiceTextAPIKeyTag, voiceTextAPIKeyIdx);
     Nefry.setStoreTitle(mqttStartCharTag, mqttStartCharIdx);
     Nefry.setStoreTitle(mqttEndCharTag, mqttEndCharIdx);
+    Nefry.setLed(0, 0, 0);
 
     //date
     configTime(JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
