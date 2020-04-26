@@ -15,6 +15,8 @@ void setup()
 void loop()
 {
   M5.update();
+  bool isOn = false;
+  //byte readData = 0x00;
   for (byte address = 1; address < 127; address++)
   {
     Wire.beginTransmission(address);
@@ -25,8 +27,12 @@ void loop()
       //  Serial.print("0");
       //Serial.print(address, HEX);
       //Serial.println("  !");
-      Wire.requestFrom(address, 1);
-      Serial.println(Wire.read());
+
+      //Wire.requestFrom(address, 1);
+      //readData = Wire.read();
+      isOn = true;
+      break;
     }
   }
+  Serial.println(isOn);
 }
