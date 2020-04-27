@@ -406,6 +406,9 @@ void setup()
 
   NefryDisplay.display();
   Nefry.ndelay(10);
+
+  // debug
+  isOn = true;
 }
 
 void loop()
@@ -416,9 +419,7 @@ void loop()
 
   // MQTT Clientへ接続
   if (!client.connected())
-  {
     isConnect = reconnect();
-  }
 
   // 振動センサーから値を読み取る
   // 一度ONになったらpublishされるまで読み取らない
