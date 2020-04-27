@@ -347,24 +347,21 @@ void captureAndPublish()
 
   //mqtt送信
   const char *tmp = bbt_token.c_str();
-  // Attempt to connect
-  if (client.connect(clientId.c_str(), tmp, ""))
-  {
-    // https://arduinojson.org/v6/doc/upgrade/
-    char buffer[128];
-    StaticJsonDocument<128> root;
-    root["fn"] = String(_fn);
-    root["ispublic"] = true;
-    root["ts"] = t;
-    serializeJson(root, buffer);
-    client.publish(topic, buffer, QoS);
-  }
+  char buffer[128];
+  StaticJsonDocument<128> root;
+  root["fn"] = String(_fn);
+  root["ispublic"] = true;
+  root["ts"] = t;
+  serializeJson(root, buffer);
+  client.publish(topic, buffer, QoS);
+}
+
+void chkVibrationSensor()
+{
 }
 
 void setup()
 {
-  ofsTime = millis();
-
   Nefry.setProgramName("Cat Watching");
 
   NefryDisplay.begin();
@@ -437,10 +434,7 @@ void loop()
     if (!isOn)
       return;
 
-    if (isOn)
-    {
-      captureAndPublish();
-      isOn = false;
-    }
+    captureAndPublish();
+    isOn = false;
   });
 }

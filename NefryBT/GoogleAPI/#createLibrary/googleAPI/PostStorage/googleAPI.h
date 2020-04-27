@@ -182,13 +182,17 @@ public:
     postHeader += ("\r\n\r\n");
 
     String result = postRequest(host, postHeader, postData);
+    //jsonデータ以外の余計なデータを削除
+    int tmpFrom = result.indexOf("{");
+    int tmpTo = result.lastIndexOf("}");
+    result = result.substring(tmpFrom, tmpTo + 1);
+    Serial.println(result);
 
     //取得したjsonデータからAccessTokenを取得する
-    const int BUFFER_SIZE = JSON_OBJECT_SIZE(4) + JSON_ARRAY_SIZE(1);
-    StaticJsonDocument<BUFFER_SIZE> doc;
+    StaticJsonDocument<256> doc;
     char json[result.length() + 1];
     unsigned int size = sizeof(json);
-    result.toCharArray(json, sizeof(json));
+    result.toCharArray(json, size);
 
     DeserializationError error = deserializeJson(doc, json);
     if (error)
@@ -336,10 +340,16 @@ private:
       {
         Serial.println(F("[Read Data]"));
       }
-      String line = client.readStringUntil('\r');
-      Serial.println(line);
-      result += line;
+
+      result = "";
+      while (client.available())
+      {
+        String line = client.readStringUntil('\r');
+        //Serial.println(line);
+        result += line;
+      }
     }
+    client.stop();
 
     Serial.println("closing connection");
     return result;
