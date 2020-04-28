@@ -35,6 +35,22 @@ public:
   const char *host = "www.googleapis.com";
   const int httpsPort = 443;
 
+  googleAPI()
+  {
+    Nefry.setStoreTitleStr("Storage Bucket", NEFRY_DATASTORE_BUCKET);
+    Nefry.setStoreTitleStr("Refresh Token", NEFRY_DATASTORE_REFRESH_TOKEN);
+    Nefry.setStoreTitleStr("Client ID", NEFRY_DATASTORE_CLIENT_ID);
+    Nefry.setStoreTitleStr("Client Secret", NEFRY_DATASTORE_CLIENT_SECRET);
+    Nefry.setStoreTitleStr("Parent Folder", NEFRY_DATASTORE_PARENT);
+
+    bucket = Nefry.getStoreStr(NEFRY_DATASTORE_BUCKET);
+    refresh_token = Nefry.getStoreStr(NEFRY_DATASTORE_REFRESH_TOKEN);
+    client_id = Nefry.getStoreStr(NEFRY_DATASTORE_CLIENT_ID);
+    client_secret = Nefry.getStoreStr(NEFRY_DATASTORE_CLIENT_SECRET);
+    parentFolder = Nefry.getStoreStr(NEFRY_DATASTORE_PARENT);
+    accessToken = "";
+  }
+
   String getPostHeader(String header, uint32_t len)
   {
     if (accessToken.length() > 0)
@@ -93,27 +109,21 @@ public:
 
   bool InitAPI()
   {
-    Nefry.setStoreTitleStr("Storage Bucket", NEFRY_DATASTORE_BUCKET);
-    Nefry.setStoreTitleStr("Refresh Token", NEFRY_DATASTORE_REFRESH_TOKEN);
-    Nefry.setStoreTitleStr("Client ID", NEFRY_DATASTORE_CLIENT_ID);
-    Nefry.setStoreTitleStr("Client Secret", NEFRY_DATASTORE_CLIENT_SECRET);
-    Nefry.setStoreTitleStr("Parent Folder", NEFRY_DATASTORE_PARENT);
-
-    bucket = Nefry.getStoreStr(NEFRY_DATASTORE_BUCKET);
-    refresh_token = Nefry.getStoreStr(NEFRY_DATASTORE_REFRESH_TOKEN);
-    client_id = Nefry.getStoreStr(NEFRY_DATASTORE_CLIENT_ID);
-    client_secret = Nefry.getStoreStr(NEFRY_DATASTORE_CLIENT_SECRET);
-    parentFolder = Nefry.getStoreStr(NEFRY_DATASTORE_PARENT);
-    accessToken = "";
-
     if (refresh_token == "")
+    {
+      Serial.println(F("Refresh Token is Nothing..."));
       return false;
+    }
     if (client_id == "")
+    {
+      Serial.println(F("Client ID is Nothing..."));
       return false;
+    }
     if (client_secret == "")
+    {
+      Serial.println(F("Client Secret is Nothing..."));
       return false;
-
-    delay(5000);
+    }
 
     //アクセストークンを取得
     accessToken = GetAccessToken(refresh_token, client_id, client_secret);
