@@ -5,7 +5,7 @@
 #include <NefrySetting.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
-#include "interval.h"
+#include "intervalMs.h"
 #include "ArduCAM.h"
 #include <SPI.h>
 #include "memorysaver.h"
@@ -28,8 +28,14 @@ googleAPI api;
 // true : DriveにPOST false : StorageにPOST
 #define POST_DRIVE false
 
-// ループ周期(us)
-#define LOOPTIME_MQTT 5000000
+// ループ周期(ms)
+
+// ArduCAMの初期化チェック
+#define LOOPTIME_ARDUCAM_INIT 60 * 1000
+// カメラで撮影＆保存、MQTTでトリガーを投げる
+#define LOOPTIME_CAPTURE 2 * 1000
+// リフレッシュトークンの再取得
+#define LOOPTIME_REFRESHTOKEN 55 * 60 * 1000
 
 // 振動センサー
 bool isOn;
@@ -45,7 +51,7 @@ bool isFinishedInit;
 // MQTT
 #define NEFRY_DATASTORE_BEEBOTTE 1
 #define BBT "mqtt.beebotte.com"
-#define QoS 2
+#define QoS 0
 String bbt_token;
 char *topic = "CatImage/fn";
 WiFiClient espClient;
@@ -380,6 +386,9 @@ void setup()
   // 振動センサー
   isOn = false;
 
+  // ArduCAM
+  isFinishedInit = false;
+
   Nefry.enableSW();
 
   NefryDisplay.clear();
@@ -388,23 +397,12 @@ void setup()
   NefryDisplay.drawString(0, 10, F("Init API Setting..."));
   NefryDisplay.display();
 
+  // Google API
   api.InitAPI();
 
   NefryDisplay.drawString(0, 20, F("Success in Setting!"));
-  NefryDisplay.drawString(0, 30, F("Camera Setting..."));
   NefryDisplay.display();
 
-  isFinishedInit = ArduCAM_Init();
-  if (isFinishedInit)
-  {
-    NefryDisplay.drawString(0, 40, F("Success in Camera Setting"));
-  }
-  else
-  {
-    NefryDisplay.drawString(0, 40, F("Fail in Camera Setting"));
-  }
-
-  NefryDisplay.display();
   Nefry.ndelay(10);
 
   // debug
@@ -413,13 +411,33 @@ void setup()
 
 void loop()
 {
-  // カメラの設定が失敗した場合は何もしない
-  if (!isFinishedInit)
-    return;
+  // カメラの初期設定
+  interval<LOOPTIME_ARDUCAM_INIT>::run([] {
+    if (!isFinishedInit)
+    {
+      NefryDisplay.drawString(0, 30, F("Camera Setting..."));
+      NefryDisplay.display();
+      isFinishedInit = ArduCAM_Init();
+      if (isFinishedInit)
+      {
+        NefryDisplay.drawString(0, 40, F("Success in Camera Setting"));
+      }
+      else
+      {
+        NefryDisplay.drawString(0, 40, F("Fail in Camera Setting"));
+      }
+      NefryDisplay.display();
+    }
+  });
 
   // MQTT Clientへ接続
   if (!client.connected())
     isConnect = reconnect();
+
+  // リフレッシュトークンの再取得
+  interval<LOOPTIME_REFRESHTOKEN>::run([] {
+    api.InitAPI();
+  });
 
   // 振動センサーから値を読み取る
   // 一度ONになったらpublishされるまで読み取らない
@@ -428,8 +446,10 @@ void loop()
     chkVibrationSensor();
   }
 
-  //MQTT publish
-  interval<LOOPTIME_MQTT>::run([] {
+  // Capture And publish
+  interval<LOOPTIME_CAPTURE>::run([] {
+    if (!isFinishedInit)
+      return;
     if (!isConnect)
       return;
     if (!isOn)
