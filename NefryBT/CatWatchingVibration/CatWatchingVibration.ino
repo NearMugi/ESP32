@@ -38,6 +38,7 @@ googleAPI api;
 #define LOOPTIME_REFRESHTOKEN 55 * 60 * 1000
 
 // 振動センサー
+#define PIN_VIBRATION_SENSOR A1
 bool isOn;
 
 // date
@@ -55,7 +56,7 @@ bool isFinishedInit;
 String bbt_token;
 char *topic = "CatImage/fn";
 WiFiClient espClient;
-PubSubClient client(espClient);
+PubSubClient mqttClient(espClient);
 bool isConnect;
 
 bool reconnect()
@@ -66,7 +67,7 @@ bool reconnect()
   clientId += String(random(0xffff), HEX);
 
   // Attempt to connect
-  if (client.connect(clientId.c_str(), bbt_token.c_str(), ""))
+  if (mqttClient.connect(clientId.c_str(), bbt_token.c_str(), ""))
   {
     Serial.println("connected");
     return true;
@@ -74,7 +75,7 @@ bool reconnect()
   else
   {
     Serial.print("failed, rc=");
-    Serial.println(client.state());
+    Serial.println(mqttClient.state());
     return false;
   }
 }
@@ -359,15 +360,12 @@ void captureAndPublish()
   root["ispublic"] = true;
   root["ts"] = t;
   serializeJson(root, buffer);
-  client.publish(topic, buffer, QoS);
-}
-
-void chkVibrationSensor()
-{
+  mqttClient.publish(topic, buffer, QoS);
 }
 
 void setup()
 {
+  Nefry.setLed(0, 0, 0);
   Nefry.setProgramName("Cat Watching");
 
   NefryDisplay.begin();
@@ -375,7 +373,7 @@ void setup()
   Nefry.setStoreTitle("MQTT_Token", NEFRY_DATASTORE_BEEBOTTE);
 
   // MQTT
-  client.setServer(BBT, 1883);
+  mqttClient.setServer(BBT, 1883);
   //NefryのDataStoreに書き込んだToken(String)を(const char*)に変換
   bbt_token = "token:";
   bbt_token += Nefry.getStoreStr(NEFRY_DATASTORE_BEEBOTTE);
@@ -384,29 +382,21 @@ void setup()
   configTime(JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
 
   // 振動センサー
+  pinMode(PIN_VIBRATION_SENSOR, INPUT);
   isOn = false;
 
   // ArduCAM
   isFinishedInit = false;
 
   Nefry.enableSW();
-
-  NefryDisplay.clear();
-  NefryDisplay.setFont(ArialMT_Plain_10);
-  NefryDisplay.drawString(0, 0, F("[Post Jpeg File]"));
-  NefryDisplay.drawString(0, 10, F("Init API Setting..."));
-  NefryDisplay.display();
-
-  // Google API
-  api.InitAPI();
-
   NefryDisplay.drawString(0, 20, F("Success in Setting!"));
   NefryDisplay.display();
 
   Nefry.ndelay(10);
 
+  Nefry.setLed(128, 128, 128);
   // debug
-  isOn = true;
+  //isOn = true;
 }
 
 void loop()
@@ -431,7 +421,7 @@ void loop()
   });
 
   // MQTT Clientへ接続
-  if (!client.connected())
+  if (!mqttClient.connected())
     isConnect = reconnect();
 
   // リフレッシュトークンの再取得
@@ -443,19 +433,26 @@ void loop()
   // 一度ONになったらpublishされるまで読み取らない
   if (!isOn)
   {
-    chkVibrationSensor();
+    if (!digitalRead(PIN_VIBRATION_SENSOR))
+    {
+      Nefry.setLed(0, 255, 0);
+      isOn = true;
+    }
   }
 
   // Capture And publish
   interval<LOOPTIME_CAPTURE>::run([] {
-    if (!isFinishedInit)
+    if (!isFinishedInit || !isConnect)
+    {
+      Nefry.setLed(255, 0, 0);
       return;
-    if (!isConnect)
-      return;
+    }
     if (!isOn)
       return;
 
+    Nefry.setLed(0, 0, 255);
     captureAndPublish();
+    Nefry.setLed(128, 128, 128);
     isOn = false;
   });
 }
