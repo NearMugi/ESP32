@@ -54,7 +54,7 @@ bool isFinishedInit;
 #define BBT "mqtt.beebotte.com"
 #define QoS 0
 String bbt_token;
-char *topic = "CatImage/fn";
+char *topic = "CatImage/fileName";
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 bool isConnect;
