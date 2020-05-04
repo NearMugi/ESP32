@@ -9,6 +9,7 @@
 #include "ArduCAM.h"
 #include <SPI.h>
 #include "memorysaver.h"
+#include "mqttConfig.h"
 
 void setting()
 {
@@ -33,7 +34,7 @@ googleAPI api;
 // ArduCAMの初期化チェック
 #define LOOPTIME_ARDUCAM_INIT 60 * 1000
 // カメラで撮影＆保存、MQTTでトリガーを投げる
-#define LOOPTIME_CAPTURE 2 * 1000
+#define LOOPTIME_CAPTURE 1 * 1000
 // リフレッシュトークンの再取得
 #define LOOPTIME_REFRESHTOKEN 55 * 60 * 1000
 
@@ -51,33 +52,29 @@ bool isFinishedInit;
 
 // MQTT
 #define NEFRY_DATASTORE_BEEBOTTE 1
-#define BBT "mqtt.beebotte.com"
-#define QoS 0
+const char *host = "mqtt.beebotte.com";
+int QoS = 0;
+const char *clientId;
 String bbt_token;
-char *topic = "CatImage/fileName";
-WiFiClient espClient;
-PubSubClient mqttClient(espClient);
+WiFiClientSecure espClient;
+PubSubClient mqttClient(host, 8883, espClient);
 bool isConnect;
 
 bool reconnect()
 {
   Serial.print(F("\nAttempting MQTT connection..."));
-  // Create a random client ID
-  String clientId = "ESP32Client-";
-  clientId += String(random(0xffff), HEX);
-
   // Attempt to connect
-  if (mqttClient.connect(clientId.c_str(), bbt_token.c_str(), ""))
+  const char *user = bbt_token.c_str();
+  if (mqttClient.connect(clientId, user, NULL))
   {
     Serial.println("connected");
-    return true;
   }
   else
   {
     Serial.print("failed, rc=");
     Serial.println(mqttClient.state());
-    return false;
   }
+  return mqttClient.connected();
 }
 
 bool ArduCAM_Init()
@@ -373,7 +370,10 @@ void setup()
   Nefry.setStoreTitle("MQTT_Token", NEFRY_DATASTORE_BEEBOTTE);
 
   // MQTT
-  mqttClient.setServer(BBT, 1883);
+  espClient.setCACert(beebottle_ca_cert);
+  uint64_t chipid = ESP.getEfuseMac();
+  String tmp = "ESP32-" + String((uint16_t)(chipid >> 32), HEX);
+  clientId = tmp.c_str();
   //NefryのDataStoreに書き込んだToken(String)を(const char*)に変換
   bbt_token = "token:";
   bbt_token += Nefry.getStoreStr(NEFRY_DATASTORE_BEEBOTTE);
@@ -452,6 +452,11 @@ void loop()
 
     Nefry.setLed(0, 0, 255);
     captureAndPublish();
+
+    // 送信してから少し待つ
+    Nefry.setLed(0, 128, 128);
+    delay(10000);
+
     Nefry.setLed(128, 128, 128);
     isOn = false;
   });
