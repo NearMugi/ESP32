@@ -1,6 +1,8 @@
 #include <Nefry.h>
 #include <NefryDisplay.h>
 #include <NefrySetting.h>
+#include "intervalMs.h"
+
 void setting()
 {
     Nefry.disableDisplayStatus();
@@ -11,17 +13,30 @@ HardwareSerial uart(1);
 
 #define WAIT_CHECK_RESPONCE_MS 2000
 #define RESPONCE_OK "OK"
+#define SKTERM_ERR "ER10"
+#define SKSCAN_FIND "EPANDESC"
+#define SKSCAN_CHANNEL "Channel:"
+#define SKSCAN_PANID "Pan ID:"
+#define SKSCAN_ADDR "Addr:"
+#define SKLL64_IPV6 "FE80"
+#define SKJOIN_SUC "EVENT 25"
+#define RESPONCE "ERXUDP"
 
 bool isConnect;
 String serviceID;
 String servicePW;
 
-String Channel;
-String PanID;
-String Addr;
+String channel;
+String panID;
+String addr;
 String ipv6;
 
-void send_ECHONETLiteComm()
+// ループ周期(ms)
+
+// 即時電力値の取得
+#define LOOPTIME_GET_EP_VALUE 60 * 1000
+
+void getEPValue()
 {
     //コマンドバイト列
     int ECHONETLiteComm[16] = {0x10, 0x81, 0x00, 0x01, 0x05, 0xFF, 0x01, 0x02, 0x88, 0x01, 0x62, 0x02, 0xE7, 0x00, 0xE8, 0x00};
@@ -58,6 +73,7 @@ String chkResponse(String keyword, unsigned long chkTime)
             Serial.println(F("[Find keyword]"));
             break;
         }
+        delay(100);
     }
     return res;
 }
@@ -76,9 +92,9 @@ bool chkResponceOK(unsigned long chkTime)
 void connect()
 {
     Serial.println(F("[Start Connection...]"));
-    Channel = "";
-    PanID = "";
-    Addr = "";
+    channel = "";
+    panID = "";
+    addr = "";
     ipv6 = "";
 
     String tmpRes = "";
@@ -96,7 +112,7 @@ void connect()
     tmpRes = chkResponse(RESPONCE_OK, WAIT_CHECK_RESPONCE_MS);
     if (tmpRes.indexOf(RESPONCE_OK) < 0)
     {
-        if (tmpRes.indexOf("ER10") < 0)
+        if (tmpRes.indexOf(SKTERM_ERR) < 0)
         {
             Serial.println(F("[Fail to DisConnect...]"));
             return;
@@ -137,8 +153,47 @@ void connect()
 
     // スマートメーターの存在をスキャンする
     send("SKSCAN 2 FFFFFFFF 6");
-    tmpRes = chkResponse("EVENT 20", 15000);
-    Serial.println(tmpRes);
+    tmpRes = chkResponse(SKSCAN_FIND, 30000);
+    //Serial.println(tmpRes);
+    if (tmpRes.indexOf(SKSCAN_FIND) < 0)
+    {
+        Serial.println(F("[Not Found SmartMeterDevice...]"));
+        return;
+    }
+    int idx = tmpRes.indexOf(SKSCAN_CHANNEL) + 8;
+    channel = tmpRes.substring(idx, idx + 2);
+    idx = tmpRes.indexOf(SKSCAN_PANID) + 7;
+    panID = tmpRes.substring(idx, idx + 4);
+    idx = tmpRes.indexOf(SKSCAN_ADDR) + 5;
+    addr = tmpRes.substring(idx, idx + 16);
+
+    // スマートメーター機器の登録
+    send("SKSREG S2 " + channel);
+    if (!chkResponceOK(WAIT_CHECK_RESPONCE_MS))
+    {
+        Serial.println(F("[Fail to Setting Channnel...]"));
+        return;
+    }
+    send("SKSREG S3 " + panID);
+    if (!chkResponceOK(WAIT_CHECK_RESPONCE_MS))
+    {
+        Serial.println(F("[Fail to Setting Pan ID...]"));
+        return;
+    }
+
+    // IPv6値を取得する
+    send("SKLL64 " + addr);
+    ipv6 = chkResponse(SKLL64_IPV6, WAIT_CHECK_RESPONCE_MS);
+    ipv6.trim();
+
+    // PANA接続 ※末尾に改行が必要
+    send("SKJOIN " + ipv6 + "\n");
+    tmpRes = chkResponse(SKJOIN_SUC, 30000);
+    if (tmpRes.indexOf(SKJOIN_SUC) < 0)
+    {
+        Serial.println(F("[Fail to Connect...]"));
+        return;
+    }
 
     Serial.println(F("[Connected!!!]"));
     isConnect = true;
@@ -159,4 +214,14 @@ void loop()
     {
         connect();
     }
+
+    interval<LOOPTIME_GET_EP_VALUE>::run([] {
+        if (isConnect)
+        {
+            getEPValue();
+            String tmp = chkResponse(RESPONCE, 15000);
+            String resData = tmp.substring(tmp.lastIndexOf(" ") + 1);
+            Serial.println(resData);
+        }
+    });
 }
