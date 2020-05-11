@@ -35,9 +35,12 @@ String ipv6;
 
 // 即時電力値の取得
 #define LOOPTIME_GET_EP_VALUE 60 * 1000
+// 接続確認
+#define LOOPTIME_CHECK_CONNECT 30 * 1000
 
 void getEPValue()
 {
+    Serial.println("[Start getEPValue]");
     //コマンドバイト列
     int ECHONETLiteComm[16] = {0x10, 0x81, 0x00, 0x01, 0x05, 0xFF, 0x01, 0x02, 0x88, 0x01, 0x62, 0x02, 0xE7, 0x00, 0xE8, 0x00};
     //UDPハンドラ、宛先、宛先ポート番号(0x0E1A)、暗号化フラグ、送信データ長の送信(16byte) 、スペース(0x20)
@@ -57,36 +60,27 @@ void send(String val)
 }
 
 // レスポンスの確認(キーワードを含むデータを取得)
-String chkResponse(String keyword, unsigned long chkTime)
+String chkResponse(unsigned long chkTime)
 {
     String res = "";
     String readData = "";
-    unsigned long responceTime = millis();
     unsigned long waitTime = millis() + chkTime;
-
     while (waitTime >= millis())
     {
-        readData = uart.readString();
-        //Serial.println("<<< " + readData);
-        res += readData;
-        if (res.indexOf(keyword) >= 0)
+        if (uart.available())
         {
-            Serial.println(F("[Find keyword]"));
-            Serial.println(readData);
-            break;
+            readData = uart.readString();
+            Serial.println("<<< " + readData);
+            res += readData;
         }
-        delay(100);
     }
-    Serial.print(F("[Progress Time(ms)] : "));
-    Serial.println(millis() - responceTime);
-
     return res;
 }
 
 // レスポンスの確認(OKが返ってくるかチェックするだけの場合)
 bool chkResponceOK(unsigned long chkTime)
 {
-    if (chkResponse(RESPONCE_OK, chkTime).indexOf(RESPONCE_OK) >= 0)
+    if (chkResponse(chkTime).indexOf(RESPONCE_OK) >= 0)
     {
         //Serial.println(F("[Responce Check OK !!!]"));
         return true;
@@ -114,7 +108,7 @@ void connect()
 
     // PANAセッションの終了　接続ならOK,未接続ならER10が返ってくる
     send("SKTERM");
-    tmpRes = chkResponse(RESPONCE_OK, WAIT_CHECK_RESPONCE_MS);
+    tmpRes = chkResponse(WAIT_CHECK_RESPONCE_MS);
     if (tmpRes.indexOf(RESPONCE_OK) < 0)
     {
         if (tmpRes.indexOf(SKTERM_ERR) < 0)
@@ -158,7 +152,7 @@ void connect()
 
     // スマートメーターの存在をスキャンする
     send("SKSCAN 2 FFFFFFFF 6");
-    tmpRes = chkResponse(SKSCAN_FIND, 15000);
+    tmpRes = chkResponse(20000);
     //Serial.println(tmpRes);
     if (tmpRes.indexOf(SKSCAN_FIND) < 0)
     {
@@ -188,12 +182,20 @@ void connect()
 
     // IPv6値を取得する
     send("SKLL64 " + addr);
-    ipv6 = chkResponse(SKLL64_IPV6, WAIT_CHECK_RESPONCE_MS);
+    ipv6 = chkResponse(WAIT_CHECK_RESPONCE_MS);
     ipv6.trim();
 
-    // PANA接続 ※末尾に改行が必要
-    send("SKJOIN " + ipv6 + "\n");
-    tmpRes = chkResponse(SKJOIN_SUC, 60000);
+    // PINGを投げる
+    send("SKPING " + ipv6);
+    if (!chkResponceOK(WAIT_CHECK_RESPONCE_MS))
+    {
+        Serial.println(F("[Fail to throw ping...]"));
+        return;
+    }
+
+    // PANA接続
+    send("SKJOIN " + ipv6);
+    tmpRes = chkResponse(20000);
     if (tmpRes.indexOf(SKJOIN_SUC) < 0)
     {
         Serial.println(F("[Fail to Connect...]"));
@@ -220,13 +222,30 @@ void loop()
         connect();
     }
 
+    interval<LOOPTIME_CHECK_CONNECT>::run([] {
+        if (isConnect)
+        {
+            // PINGを投げる
+            send("SKPING " + ipv6);
+            if (!chkResponceOK(WAIT_CHECK_RESPONCE_MS))
+            {
+                Serial.println(F("[Fail to throw ping...]"));
+                isConnect = false;
+            }
+        }
+    });
+
     interval<LOOPTIME_GET_EP_VALUE>::run([] {
         if (isConnect)
         {
             getEPValue();
-            String tmp = chkResponse(RESPONCE_EP_VALUE, 15000);
-            String resData = tmp.substring(tmp.lastIndexOf(" ") + 1);
-            Serial.println(resData);
+            String tmp = chkResponse(10000);
+            if (tmp.indexOf(RESPONCE_EP_VALUE) > 0)
+            {
+                String resData = tmp.substring(tmp.lastIndexOf(" ") + 1);
+                Serial.print(F("[Get Electric Power] : "));
+                Serial.println(resData);
+            }
         }
     });
 }
