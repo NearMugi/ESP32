@@ -22,6 +22,12 @@ void loop()
     {
         String in = Serial.readString();
         Serial.println(">>> " + in);
+        for (int i = 0; i < in.length(); i++)
+        {
+            Serial.print(in[i], HEX);
+            Serial.print("-");
+        }
+        Serial.println("");
         uart.println(in);
     }
     if (uart.available())
