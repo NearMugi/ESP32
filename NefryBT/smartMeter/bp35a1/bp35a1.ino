@@ -20,7 +20,7 @@ HardwareSerial uart(1);
 #define SKSCAN_ADDR "Addr:"
 #define SKLL64_IPV6 "FE80"
 #define SKJOIN_SUC "EVENT 25"
-#define RESPONCE "ERXUDP"
+#define RESPONCE_EP_VALUE "28801"
 
 bool isConnect;
 String serviceID;
@@ -61,20 +61,25 @@ String chkResponse(String keyword, unsigned long chkTime)
 {
     String res = "";
     String readData = "";
+    unsigned long responceTime = millis();
     unsigned long waitTime = millis() + chkTime;
 
     while (waitTime >= millis())
     {
         readData = uart.readString();
-        Serial.println("<<< " + readData);
+        //Serial.println("<<< " + readData);
         res += readData;
         if (res.indexOf(keyword) >= 0)
         {
             Serial.println(F("[Find keyword]"));
+            Serial.println(readData);
             break;
         }
         delay(100);
     }
+    Serial.print(F("[Progress Time(ms)] : "));
+    Serial.println(millis() - responceTime);
+
     return res;
 }
 
@@ -83,7 +88,7 @@ bool chkResponceOK(unsigned long chkTime)
 {
     if (chkResponse(RESPONCE_OK, chkTime).indexOf(RESPONCE_OK) >= 0)
     {
-        Serial.println(F("[Responce Check OK !!!]"));
+        //Serial.println(F("[Responce Check OK !!!]"));
         return true;
     }
     return false;
@@ -91,7 +96,7 @@ bool chkResponceOK(unsigned long chkTime)
 
 void connect()
 {
-    Serial.println(F("[Start Connection...]"));
+    Serial.println(F("\n[Start Connection...]"));
     channel = "";
     panID = "";
     addr = "";
@@ -153,7 +158,7 @@ void connect()
 
     // スマートメーターの存在をスキャンする
     send("SKSCAN 2 FFFFFFFF 6");
-    tmpRes = chkResponse(SKSCAN_FIND, 30000);
+    tmpRes = chkResponse(SKSCAN_FIND, 15000);
     //Serial.println(tmpRes);
     if (tmpRes.indexOf(SKSCAN_FIND) < 0)
     {
@@ -188,7 +193,7 @@ void connect()
 
     // PANA接続 ※末尾に改行が必要
     send("SKJOIN " + ipv6 + "\n");
-    tmpRes = chkResponse(SKJOIN_SUC, 30000);
+    tmpRes = chkResponse(SKJOIN_SUC, 60000);
     if (tmpRes.indexOf(SKJOIN_SUC) < 0)
     {
         Serial.println(F("[Fail to Connect...]"));
@@ -219,7 +224,7 @@ void loop()
         if (isConnect)
         {
             getEPValue();
-            String tmp = chkResponse(RESPONCE, 15000);
+            String tmp = chkResponse(RESPONCE_EP_VALUE, 15000);
             String resData = tmp.substring(tmp.lastIndexOf(" ") + 1);
             Serial.println(resData);
         }
