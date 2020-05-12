@@ -20,7 +20,7 @@ HardwareSerial uart(1);
 #define SKSCAN_ADDR "Addr:"
 #define SKLL64_IPV6 "FE80"
 #define SKJOIN_SUC "EVENT 25"
-#define RESPONCE_EP_VALUE "28801"
+#define RESPONCE_EP_VALUE "1081000102880105FF0172"
 
 bool isConnect;
 String serviceID;
@@ -33,16 +33,54 @@ String ipv6;
 
 // ループ周期(ms)
 
-// 即時電力値の取得
+// 即時電力値・電流値を取得
 #define LOOPTIME_GET_EP_VALUE 60 * 1000
+// 累積電力値を取得
+#define LOOPTIME_GET_TOTAL_EP_VALUE 60 * 10 * 1000
 // 接続確認
 #define LOOPTIME_CHECK_CONNECT 30 * 1000
 
+// 即時電力値・電流値の取得
 void getEPValue()
 {
     Serial.println("[Start getEPValue]");
     //コマンドバイト列
-    int ECHONETLiteComm[16] = {0x10, 0x81, 0x00, 0x01, 0x05, 0xFF, 0x01, 0x02, 0x88, 0x01, 0x62, 0x02, 0xE7, 0x00, 0xE8, 0x00};
+    // EHD, TID, SEOJ, DEOJ, ESV, OPC, EPC1+PDC1, EPC2+PDC2
+    int ECHONETLiteComm[16] = {
+        0x10, 0x81,
+        0x00, 0x01,
+        0x05, 0xFF, 0x01,
+        0x02, 0x88, 0x01,
+        0x62,
+        0x02,
+        0xE7, 0x00,
+        0xE8, 0x00};
+    //UDPハンドラ、宛先、宛先ポート番号(0x0E1A)、暗号化フラグ、送信データ長の送信(16byte) 、スペース(0x20)
+    uart.print("SKSENDTO 1 " + ipv6 + " 0E1A 1 0010 ");
+    int d = 0;
+    for (d = 0; d <= 15; d++)
+    {
+        uart.write((int)ECHONETLiteComm[d]);
+    }
+    uart.println();
+}
+
+// 累積電力値の取得
+void getTotalEPValue()
+{
+    Serial.println("[Start getTotalEPValue]");
+    //コマンドバイト列
+    // EHD, TID, SEOJ, DEOJ, ESV, OPC, EPC1+PDC1, EPC2+PDC2, EPC3+PDC3
+    int ECHONETLiteComm[18] = {
+        0x10, 0x81,
+        0x00, 0x01,
+        0x05, 0xFF, 0x01,
+        0x02, 0x88, 0x01,
+        0x62,
+        0x03,
+        0xD3, 0x00,
+        0xE1, 0x00,
+        0xEA, 0x00};
     //UDPハンドラ、宛先、宛先ポート番号(0x0E1A)、暗号化フラグ、送信データ長の送信(16byte) 、スペース(0x20)
     uart.print("SKSENDTO 1 " + ipv6 + " 0E1A 1 0010 ");
     int d = 0;
@@ -244,6 +282,20 @@ void loop()
             {
                 String resData = tmp.substring(tmp.lastIndexOf(" ") + 1);
                 Serial.print(F("[Get Electric Power] : "));
+                Serial.println(resData);
+            }
+        }
+    });
+
+    interval<LOOPTIME_GET_TOTAL_EP_VALUE>::run([] {
+        if (isConnect)
+        {
+            getTotalEPValue();
+            String tmp = chkResponse(10000);
+            if (tmp.indexOf(RESPONCE_EP_VALUE) > 0)
+            {
+                String resData = tmp.substring(tmp.lastIndexOf(" ") + 1);
+                Serial.print(F("[Get Total Electric Power] : "));
                 Serial.println(resData);
             }
         }
