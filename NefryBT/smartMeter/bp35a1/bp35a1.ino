@@ -227,6 +227,58 @@ void connect()
     isConnect = true;
 }
 
+unsigned int hexToDec(String hexString)
+{
+
+    unsigned int decValue = 0;
+    int nextInt;
+
+    for (int i = 0; i < hexString.length(); i++)
+    {
+
+        nextInt = int(hexString.charAt(i));
+        if (nextInt >= 48 && nextInt <= 57)
+            nextInt = map(nextInt, 48, 57, 0, 9);
+        if (nextInt >= 65 && nextInt <= 70)
+            nextInt = map(nextInt, 65, 70, 10, 15);
+        if (nextInt >= 97 && nextInt <= 102)
+            nextInt = map(nextInt, 97, 102, 10, 15);
+        nextInt = constrain(nextInt, 0, 15);
+
+        decValue = (decValue * 16) + nextInt;
+    }
+
+    return decValue;
+}
+
+float convertPowerUnit(uint32_t int_power_unit)
+{
+    switch (int_power_unit)
+    {
+    case 0x0:
+        return 1;
+    case 0x1:
+        return 0.1;
+    case 0x2:
+        return 0.01;
+    case 0x3:
+        return 0.001;
+    case 0x4:
+        return 0.0001;
+    case 0xA:
+        return 10;
+    case 0xB:
+        return 100;
+    case 0xC:
+        return 1000;
+    case 0xD:
+        return 10000;
+    default:
+        Serial.println("convert error" + String(int_power_unit, DEC));
+        return 0;
+    }
+};
+
 void setup()
 {
     // (speed, type, RX:D2=23, TX:D3=19);
@@ -266,6 +318,31 @@ void loop()
                 String resData = tmp.substring(tmp.lastIndexOf(" ") + 1);
                 Serial.print(F("[Get Electric Power] : "));
                 Serial.println(resData);
+                tmp = resData.substring(24);
+                String stringE7 = tmp.substring(4, 12);
+                String stringE8 = tmp.substring(12 + 4, 12 + 12);
+                String stringD3 = tmp.substring(24 + 4, 24 + 12);
+                String stringE1 = tmp.substring(36 + 4, 36 + 6);
+                String stringEA = tmp.substring(42 + 2);
+
+                Serial.println(stringE7);
+                Serial.println(stringE8);
+                Serial.println(stringD3);
+                Serial.println(stringE1);
+                Serial.println(stringEA);
+
+                // 瞬時電力・電流値
+                unsigned int epW = hexToDec(stringE7);
+                unsigned int epA = hexToDec(stringE8);
+                // 係数
+                float coefficient = hexToDec(stringD3);
+                // 積算電力量単位
+                float powerInit = convertPowerUnit(hexToDec(stringE1));
+
+                Serial.println(epW);
+                Serial.println(epA);
+                Serial.println(powerInit);
+                Serial.println(coefficient);
             }
         }
     });
