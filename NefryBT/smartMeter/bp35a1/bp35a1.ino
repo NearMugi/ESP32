@@ -33,17 +33,16 @@ String ipv6;
 
 // ループ周期(ms)
 
-// 即時電力値・電流値を取得
+// 即時電力値・電流値・累積電力値を取得
 #define LOOPTIME_GET_EP_VALUE 60 * 1000
-// 累積電力値を取得
-#define LOOPTIME_GET_TOTAL_EP_VALUE 60 * 1 * 1000
 // 接続確認
 #define LOOPTIME_CHECK_CONNECT 30 * 1000
 
-void getValue(int *property)
+// 即時電力値・電流値・累積電力値の取得
+void getValue()
 {
-    int propertySize = sizeof(property);
-    const int cmdSize = 12 + propertySize;
+    Serial.println("[Start getElectricPowerValue]");
+    int cmdSize = 12 + 2 * 5;
     String cmdSizeString = String(cmdSize, HEX);
     cmdSizeString.toUpperCase();
     int cmdSizeStringSize = cmdSizeString.length();
@@ -51,61 +50,28 @@ void getValue(int *property)
     {
         cmdSizeString = "0" + cmdSizeString;
     }
-    Serial.println(cmdSize);
-    Serial.println(cmdSizeString);
-
     //コマンドバイト列
-    // EHD, TID, SEOJ, DEOJ, ESV, OPC, EPC1+PDC1, EPC2+PDC2
-    int ECHONETLiteComm[cmdSize] = {0x00};
-    // EHD
-    ECHONETLiteComm[0] = 0x10;
-    ECHONETLiteComm[1] = 0x81;
-    // TID
-    ECHONETLiteComm[2] = 0x00;
-    ECHONETLiteComm[3] = 0x01;
-    // SEOJ
-    ECHONETLiteComm[4] = 0x05;
-    ECHONETLiteComm[5] = 0xFF;
-    ECHONETLiteComm[6] = 0x01;
-    // DEOJ
-    ECHONETLiteComm[7] = 0x02;
-    ECHONETLiteComm[8] = 0x88;
-    ECHONETLiteComm[9] = 0x01;
-    // ESV
-    ECHONETLiteComm[10] = 0x62;
-    // OPC
-    ECHONETLiteComm[11] = propertySize / 2;
-    // EPC + PDC
-    for (int i = 0; i < propertySize; i++)
-    {
-        ECHONETLiteComm[12 + i] = property[i];
-        Serial.println(ECHONETLiteComm[12 + i]);
-    }
+    // EHD, TID, SEOJ, DEOJ, ESV, OPC, EPCn+PDCn
+    int ECHONETLiteComm[cmdSize] = {
+        0x10, 0x81,
+        0x00, 0x01,
+        0x05, 0xFF, 0x01,
+        0x02, 0x88, 0x01,
+        0x62,
+        0x05,
+        0xE7, 0x00,
+        0xE8, 0x00,
+        0xD3, 0x00,
+        0xE1, 0x00,
+        0xEA, 0x00};
 
     //UDPハンドラ、宛先、宛先ポート番号(0x0E1A)、暗号化フラグ、送信データ長の送信(16byte) 、スペース(0x20)
     uart.print("SKSENDTO 1 " + ipv6 + " 0E1A 1 " + cmdSizeString + " ");
-    int d = 0;
-    for (d = 0; d < cmdSize; d++)
+    for (int d = 0; d < cmdSize; d++)
     {
         uart.write((int)ECHONETLiteComm[d]);
     }
     uart.println();
-}
-
-// 即時電力値・電流値の取得
-void getEPValue()
-{
-    Serial.println("[Start getEPValue]");
-    int propertyData[4] = {0xE7, 0x00, 0xE8, 0x00};
-    getValue(propertyData);
-}
-
-// 累積電力値の取得
-void getTotalEPValue()
-{
-    Serial.println("[Start getTotalEPValue]");
-    int propertyData[6] = {0xD3, 0x00, 0xE1, 0x00, 0xEA, 0x00};
-    getValue(propertyData);
 }
 
 void send(String val)
@@ -293,26 +259,12 @@ void loop()
     interval<LOOPTIME_GET_EP_VALUE>::run([] {
         if (isConnect)
         {
-            getEPValue();
+            getValue();
             String tmp = chkResponse(10000);
             if (tmp.indexOf(RESPONCE_EP_VALUE) > 0)
             {
                 String resData = tmp.substring(tmp.lastIndexOf(" ") + 1);
                 Serial.print(F("[Get Electric Power] : "));
-                Serial.println(resData);
-            }
-        }
-    });
-
-    interval<LOOPTIME_GET_TOTAL_EP_VALUE>::run([] {
-        if (isConnect)
-        {
-            getTotalEPValue();
-            String tmp = chkResponse(10000);
-            if (tmp.indexOf(RESPONCE_EP_VALUE) > 0)
-            {
-                String resData = tmp.substring(tmp.lastIndexOf(" ") + 1);
-                Serial.print(F("[Get Total Electric Power] : "));
                 Serial.println(resData);
             }
         }
