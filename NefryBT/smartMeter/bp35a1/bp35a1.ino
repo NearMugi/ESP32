@@ -323,7 +323,7 @@ void loop()
                 String stringE8 = tmp.substring(12 + 4, 12 + 12);
                 String stringD3 = tmp.substring(24 + 4, 24 + 12);
                 String stringE1 = tmp.substring(36 + 4, 36 + 6);
-                String stringEA = tmp.substring(42 + 2);
+                String stringEA = tmp.substring(42 + 4);
 
                 Serial.println(stringE7);
                 Serial.println(stringE8);
@@ -331,18 +331,33 @@ void loop()
                 Serial.println(stringE1);
                 Serial.println(stringEA);
 
-                // 瞬時電力・電流値
-                unsigned int epW = hexToDec(stringE7);
-                unsigned int epA = hexToDec(stringE8);
+                // 瞬時電力(0.1A)・電流値(W)
+                float epA = (float)(hexToDec(stringE7)) * 0.1;
+                float epkW = (float)hexToDec(stringE8) * 0.001;
                 // 係数
                 float coefficient = hexToDec(stringD3);
                 // 積算電力量単位
                 float powerInit = convertPowerUnit(hexToDec(stringE1));
 
-                Serial.println(epW);
+                // 累積電力値
+                int year = hexToDec(stringEA.substring(0, 4));
+                int month = hexToDec(stringEA.substring(4, 4 + 2));
+                int day = hexToDec(stringEA.substring(6, 6 + 2));
+                int hour = hexToDec(stringEA.substring(8, 8 + 2));
+                int minute = hexToDec(stringEA.substring(10, 10 + 2));
+                int second = hexToDec(stringEA.substring(12, 12 + 2));
+                char date[15] = "";
+                sprintf(date, "%04d%02d%02d%02d%02d%02d", year, month, day, hour, minute, second);
+
+                float totalkWh = hexToDec(stringEA.substring(14));
+                totalkWh *= coefficient * powerInit;
+
+                Serial.println(epkW);
                 Serial.println(epA);
                 Serial.println(powerInit);
                 Serial.println(coefficient);
+                Serial.println(date);
+                Serial.println(totalkWh);
             }
         }
     });
