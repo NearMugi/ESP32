@@ -15,6 +15,7 @@
 #include <FS.h>
 #include <SPIFFS.h>
 #include <esp8266-google-home-notifier.h>
+#include "mqttConfig.h"
 
 #include <NefrySetting.h>
 void setting()
@@ -43,14 +44,11 @@ NefrySetting nefrySetting(setting);
 #define mqttEndCharTag "MQTT_EndChar"
 
 // MQTT
-#define BBT "mqtt.beebotte.com"
+const char *host = "mqtt.beebotte.com";
+const char *clientId;
 String bbt_token;
-#define Channel "GoogleHome"
-#define Res "message"
-char topic[64];
-
-WiFiClient espClient;
-PubSubClient client(espClient);
+WiFiClientSecure espClient;
+PubSubClient mqttClient(host, 8883, espClient);
 
 #define MAX_MSGSIZE 100
 String getTopic;
@@ -79,30 +77,24 @@ String ipStr; //ipアドレス
 #define JST 3600 * 9
 time_t getTs;
 
-void reconnect()
+bool reconnect()
 {
     Serial.print("Attempting MQTT connection...");
-    // Create a random client ID
-    String clientId = "ESP32Client-";
-    clientId += String(random(0xffff), HEX);
-
-    //NefryのDataStoreに書き込んだToken(String)を(const char*)に変換
-    bbt_token = "token:";
-    bbt_token += Nefry.getStoreStr(beebotteTokenIdx);
-    const char *tmp = bbt_token.c_str();
     // Attempt to connect
-    if (client.connect(clientId.c_str(), tmp, ""))
+    const char *user = bbt_token.c_str();
+    if (mqttClient.connect(clientId, user, NULL))
     {
         Serial.println("connected");
-        msgIsConnect = "Mqtt Connected";
-        client.subscribe(topic);
+        msgIsConnect = "MQTT Connected";
+        mqttClient.subscribe(topic);
     }
     else
     {
         Serial.print("failed, rc=");
-        Serial.println(client.state());
-        msgIsConnect = "Mqtt DisConnected";
+        Serial.println(mqttClient.state());
+        msgIsConnect = "MQTT DisConnected";
     }
+    return mqttClient.connected();
 }
 
 void callback(char *topic, byte *payload, unsigned int length)
@@ -332,9 +324,15 @@ void setup()
     NefryDisplay.setAutoScrollFlg(true); //自動スクロールを有効
     NefryDisplay.autoScrollFunc(DispNefryDisplay);
 
-    client.setServer(BBT, 1883);
-    client.setCallback(callback);
-    sprintf(topic, "%s/%s", Channel, Res);
+   // MQTT
+    espClient.setCACert(beebottle_ca_cert);
+    uint64_t chipid = ESP.getEfuseMac();
+    String tmp = "ESP32-" + String((uint16_t)(chipid >> 32), HEX);
+    clientId = tmp.c_str();
+    //NefryのDataStoreに書き込んだToken(String)を(const char*)に変換
+    bbt_token = "token:";
+    bbt_token += Nefry.getStoreStr(beebotteTokenIdx);
+    mqttClient.setCallback(callback);
 
     // VoiceText API
     tts_user = Nefry.getStoreStr(voiceTextAPIKeyIdx);
@@ -372,8 +370,15 @@ void setup()
 
 void loop()
 {
-    if (!client.connected())
+    // MQTT Clientへ接続
+    if (!mqttClient.connected())
+    {
         reconnect();
+    }
+    else
+    {
+        mqttClient.loop();
+    }
 
     if (sendTrigger)
     {
@@ -385,5 +390,4 @@ void loop()
         sendTrigger = false;
     }
 
-    client.loop();
 }
