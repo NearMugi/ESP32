@@ -283,6 +283,11 @@ void bp35a1::chkConnect()
 
 void bp35a1::getEPValue()
 {
+    epA = 0.0f;
+    epkW = 0.0f;
+    totalkWh = 0.0f;
+    date = "";
+
     if (!isConnect)
         return;
 
