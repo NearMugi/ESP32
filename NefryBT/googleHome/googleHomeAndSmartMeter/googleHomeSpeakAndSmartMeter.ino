@@ -57,9 +57,9 @@ NefrySetting nefrySetting(setting);
 // ループ周期(ms)
 
 // 即時電力値・電流値・累積電力値を取得
-#define LOOPTIME_GET_EP_VALUE 60 * 1000
+#define LOOPTIME_GET_EP_VALUE 60 * 5 * 1000
 // 接続確認
-#define LOOPTIME_CHECK_CONNECT 30 * 1000
+#define LOOPTIME_CHECK_CONNECT 60 * 5 * 1000
 
 // MQTT
 const char *host = "mqtt.beebotte.com";
