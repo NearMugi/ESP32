@@ -22,6 +22,15 @@ public:
     void chkConnect();
     void getEPValue();
 
+    // 瞬時電力(A)
+    float epA;
+    // 電流値(kW)
+    float epkW;
+    // 累積電力値(kwh)
+    float totalkWh;
+    // 累積電力値の対象時間
+    String date;
+
 private:
     bool isConnect;
     String serviceID;

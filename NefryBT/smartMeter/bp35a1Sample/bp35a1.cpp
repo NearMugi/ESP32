@@ -16,6 +16,11 @@ void bp35a1::init(int PIN_RX, int PIN_TX, String id, String pw)
     serviceID = id;
     servicePW = pw;
     isConnect = false;
+
+    epA = 0.0f;
+    epkW = 0.0f;
+    totalkWh = 0.0f;
+    date = "";
 }
 
 void bp35a1::send(String val)
@@ -295,15 +300,9 @@ void bp35a1::getEPValue()
         String stringE1 = tmp.substring(36 + 4, 36 + 6);
         String stringEA = tmp.substring(42 + 4);
 
-        Serial.println(stringE7);
-        Serial.println(stringE8);
-        Serial.println(stringD3);
-        Serial.println(stringE1);
-        Serial.println(stringEA);
-
         // 瞬時電力(0.1A)・電流値(W)
-        float epA = (float)(hexToDec(stringE7)) * 0.1;
-        float epkW = (float)hexToDec(stringE8) * 0.001;
+        epA = (float)(hexToDec(stringE7)) * 0.1;
+        epkW = (float)hexToDec(stringE8) * 0.001;
         // 係数
         float coefficient = hexToDec(stringD3);
         // 積算電力量単位
@@ -316,17 +315,19 @@ void bp35a1::getEPValue()
         int hour = hexToDec(stringEA.substring(8, 8 + 2));
         int minute = hexToDec(stringEA.substring(10, 10 + 2));
         int second = hexToDec(stringEA.substring(12, 12 + 2));
-        char date[15] = "";
-        sprintf(date, "%04d%02d%02d%02d%02d%02d", year, month, day, hour, minute, second);
-
-        float totalkWh = hexToDec(stringEA.substring(14));
+        char tmpDate[15] = "";
+        sprintf(tmpDate, "%04d%02d%02d%02d%02d%02d", year, month, day, hour, minute, second);
+        date = tmpDate;
+        totalkWh = hexToDec(stringEA.substring(14));
         totalkWh *= coefficient * powerInit;
 
+#if false
         Serial.println(epkW);
         Serial.println(epA);
         Serial.println(powerInit);
         Serial.println(coefficient);
         Serial.println(date);
         Serial.println(totalkWh);
+#endif
     }
 }
