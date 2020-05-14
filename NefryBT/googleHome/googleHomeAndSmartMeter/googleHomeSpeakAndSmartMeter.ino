@@ -374,7 +374,7 @@ void setup()
     // MQTT
     espClient.setCACert(beebottle_ca_cert);
     uint64_t chipid = ESP.getEfuseMac();
-    String tmp = "ESP32-" + String((uint16_t)(chipid >> 32), HEX);
+    String tmp = "ESP32GoogleHome-" + String((uint16_t)(chipid >> 32), HEX);
     clientId = tmp.c_str();
     //NefryのDataStoreに書き込んだToken(String)を(const char*)に変換
     bbt_token = "token:";
@@ -384,7 +384,7 @@ void setup()
     // MQTT(SmartMeter)
     espClientSmartMeter.setCACert(beebottle_ca_cert);
     uint64_t chipidSmartMeter = ESP.getEfuseMac();
-    tmp = "ESP32-" + String((uint16_t)(chipidSmartMeter >> 32), HEX);
+    tmp = "ESP32SmartMeter-" + String((uint16_t)(chipidSmartMeter >> 32), HEX);
     clientIdSmartMeter = tmp.c_str();
     //NefryのDataStoreに書き込んだToken(String)を(const char*)に変換
     bbt_tokenSmartMeter = "token:";
