@@ -16,6 +16,7 @@ void bp35a1::init(int PIN_RX, int PIN_TX, String id, String pw)
     serviceID = id;
     servicePW = pw;
     isConnect = false;
+    isPhysicalConnect = true;   //物理的に接続できている前提
 
     epA = 0.0f;
     epkW = 0.0f;
@@ -148,6 +149,9 @@ bool bp35a1::chkResponceOK(unsigned long chkTime)
 
 void bp35a1::connect()
 {
+    if(!isPhysicalConnect)
+        return;
+        
     if (isConnect)
         return;
 
@@ -164,8 +168,10 @@ void bp35a1::connect()
     if (!chkResponceOK(WAIT_CHECK_RESPONCE_MS))
     {
         Serial.println(F("[Fail to Check Version...]"));
+        isPhysicalConnect = false;
         return;
     }
+    isPhysicalConnect = true;
 
     // PANAセッションの終了　接続ならOK,未接続ならER10が返ってくる
     send("SKTERM");

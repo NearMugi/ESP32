@@ -32,6 +32,7 @@ public:
     String date;
 
 private:
+    bool isPhysicalConnect;
     bool isConnect;
     String serviceID;
     String servicePW;
