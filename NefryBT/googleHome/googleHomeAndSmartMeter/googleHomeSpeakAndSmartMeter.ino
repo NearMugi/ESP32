@@ -59,7 +59,7 @@ NefrySetting nefrySetting(setting);
 // 即時電力値・電流値・累積電力値を取得
 #define LOOPTIME_GET_EP_VALUE 60 * 5 * 1000
 // 接続確認
-#define LOOPTIME_CHECK_CONNECT 60 * 5 * 1000
+#define LOOPTIME_CHECK_CONNECT 60 * 4 * 1000
 
 // MQTT
 const char *host = "mqtt.beebotte.com";
@@ -472,6 +472,7 @@ void loop()
     });
 
     interval<LOOPTIME_GET_EP_VALUE>::run([] {
+        Nefry.setLed(128, 128, 0);
         bp.getEPValue();
 
         if (bp.epA > 0.0f)
@@ -506,6 +507,7 @@ void loop()
                 mqttClientSmartMeter.publish(topicData, bufferData, QoS);
                 mqttClientSmartMeter.publish(topicTotal, bufferTotal, QoS);
                 Serial.println(F("MQTT(SmartMeter) publish!"));
+                Nefry.setLed(0, 0, 0);
             }
         }
     });
