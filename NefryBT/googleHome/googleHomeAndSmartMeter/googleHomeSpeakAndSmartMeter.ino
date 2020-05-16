@@ -96,13 +96,15 @@ char displayName[] = "";
 String googleHomeIPStr; //ipアドレス
 
 // NefryDisplayMessage
-String msgIsConnect;
+String mqttIsConnectGoogleHome;
+String mqttIsConnectSmartMeter;
 String ipStr; //ipアドレス
 #define JST 3600 * 9
 time_t getTs;
 
 // SmartMeter
 bp35a1 bp;
+time_t sendTs;
 
 bool reconnect()
 {
@@ -112,14 +114,14 @@ bool reconnect()
     if (mqttClient.connect(clientId, user, NULL))
     {
         Serial.println("connected");
-        msgIsConnect = "MQTT Connected";
+        mqttIsConnectGoogleHome = "OK";
         mqttClient.subscribe(topic);
     }
     else
     {
         Serial.print("failed, rc=");
         Serial.println(mqttClient.state());
-        msgIsConnect = "MQTT DisConnected";
+        mqttIsConnectGoogleHome = "NG";
     }
     return mqttClient.connected();
 }
@@ -132,11 +134,13 @@ bool reconnectSmartMeter()
     if (mqttClientSmartMeter.connect(clientIdSmartMeter, user, NULL))
     {
         Serial.println("connected");
+        mqttIsConnectSmartMeter = "OK";
     }
     else
     {
         Serial.print("failed, rc=");
         Serial.println(mqttClientSmartMeter.state());
+        mqttIsConnectSmartMeter = "NG";
     }
     return mqttClientSmartMeter.connected();
 }
@@ -337,13 +341,16 @@ void DispNefryDisplay()
 
     String tmpGoogleHomeIP = "GoogleHome:" + googleHomeIPStr;
     NefryDisplay.setFont(ArialMT_Plain_10);
-    NefryDisplay.drawString(0, 0, ipStr);
-    NefryDisplay.drawString(0, 12, tmpGoogleHomeIP);
-    NefryDisplay.drawString(0, 24, msgIsConnect);
-    NefryDisplay.drawString(0, 36, (String)ctime(&getTs));
+//    NefryDisplay.drawString(0, 0, ipStr);
+    NefryDisplay.drawString(0, 0, tmpGoogleHomeIP);
+    NefryDisplay.drawString(0, 10, "MQTT Gh:" + mqttIsConnectGoogleHome + " Sm:" + mqttIsConnectSmartMeter);
+
+    // MQTT
+    NefryDisplay.drawString(0, 20, (String)ctime(&getTs));
+    NefryDisplay.drawString(0, 40, (String)ctime(&sendTs));
 
     NefryDisplay.display();
-    Nefry.ndelay(10);
+    Nefry.ndelay(500);
 }
 
 void setup()
@@ -362,6 +369,8 @@ void setup()
 
     //date
     configTime(JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
+    getTs = 0;
+    sendTs = 0;
 
     //displayMessage
     IPAddress ip = WiFi.localIP();
@@ -478,9 +487,9 @@ void loop()
         if (bp.epA > 0.0f)
         {
             //日付を取得する
-            time_t t = time(NULL);
+            sendTs = time(NULL);
             struct tm *tm;
-            tm = localtime(&t);
+            tm = localtime(&sendTs);
             char getDate[15] = "";
             sprintf(getDate, "%04d%02d%02d%02d%02d%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 
@@ -490,7 +499,7 @@ void loop()
             root["date"] = getDate;
             root["a"] = bp.epA;
             root["kw"] = bp.epkW;
-            root["ts"] = t;
+            root["ts"] = (unsigned int)(sendTs * 1000);
             serializeJson(root, bufferData);
             Serial.println(bufferData);
 
@@ -498,7 +507,7 @@ void loop()
             StaticJsonDocument<200> rootTotal;
             rootTotal["date"] = bp.date;
             rootTotal["tkw"] = bp.totalkWh;
-            rootTotal["ts"] = t;
+            rootTotal["ts"] = (unsigned int)(sendTs * 1000);
             serializeJson(rootTotal, bufferTotal);
             Serial.println(bufferTotal);
 
