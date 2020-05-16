@@ -484,7 +484,10 @@ void loop()
         Nefry.setLed(128, 128, 0);
         bp.getEPValue();
 
-        if (bp.epA > 0.0f)
+        if (bp.epA <= 0.0f)
+        {
+            Nefry.setLed(0, 0, 0);
+        } else 
         {
             //日付を取得する
             sendTs = time(NULL);
@@ -499,7 +502,7 @@ void loop()
             root["date"] = getDate;
             root["a"] = bp.epA;
             root["kw"] = bp.epkW;
-            root["ts"] = (unsigned int)(sendTs * 1000);
+            root["ts"] = sendTs;
             serializeJson(root, bufferData);
             Serial.println(bufferData);
 
@@ -507,7 +510,7 @@ void loop()
             StaticJsonDocument<200> rootTotal;
             rootTotal["date"] = bp.date;
             rootTotal["tkw"] = bp.totalkWh;
-            rootTotal["ts"] = (unsigned int)(sendTs * 1000);
+            rootTotal["ts"] = sendTs;
             serializeJson(rootTotal, bufferTotal);
             Serial.println(bufferTotal);
 
