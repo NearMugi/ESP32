@@ -47,8 +47,6 @@ NefrySetting nefrySetting(setting);
 #define mqttEndCharIdx 5
 #define mqttEndCharTag "MQTT_EndChar"
 
-#define beebotteSmartMeterIdx 6
-#define beebotteSmartMeterTag "Beebotte SmartMeter Token"
 #define smartMeterIDIdx 7
 #define smartMeterIDTag "Smart Meter ID"
 #define smartMeterPWIdx 8
@@ -68,11 +66,6 @@ const char *clientId;
 String bbt_token;
 WiFiClientSecure espClient;
 PubSubClient mqttClient(host, 8883, espClient);
-// MQTT(SmartMeter)
-const char *clientIdSmartMeter;
-String bbt_tokenSmartMeter;
-WiFiClientSecure espClientSmartMeter;
-PubSubClient mqttClientSmartMeter(host, 8883, espClientSmartMeter);
 
 #define MAX_MSGSIZE 100
 String getTopic;
@@ -96,8 +89,7 @@ char displayName[] = "";
 String googleHomeIPStr; //ipアドレス
 
 // NefryDisplayMessage
-String mqttIsConnectGoogleHome;
-String mqttIsConnectSmartMeter;
+String mqttIsConnect;
 String ipStr; //ipアドレス
 #define JST 3600 * 9
 time_t getTs;
@@ -114,40 +106,22 @@ bool reconnect()
     if (mqttClient.connect(clientId, user, NULL))
     {
         Serial.println("connected");
-        mqttIsConnectGoogleHome = "OK";
-        mqttClient.subscribe(topic);
+        mqttIsConnect = "OK";
+        mqttClient.subscribe(topicGoogleHome);
     }
     else
     {
         Serial.print("failed, rc=");
         Serial.println(mqttClient.state());
-        mqttIsConnectGoogleHome = "NG";
+        mqttIsConnect = "NG";
     }
     return mqttClient.connected();
-}
-
-bool reconnectSmartMeter()
-{
-    Serial.print("Attempting MQTT(SmartMeter) connection...");
-    // Attempt to connect
-    const char *user = bbt_tokenSmartMeter.c_str();
-    if (mqttClientSmartMeter.connect(clientIdSmartMeter, user, NULL))
-    {
-        Serial.println("connected");
-        mqttIsConnectSmartMeter = "OK";
-    }
-    else
-    {
-        Serial.print("failed, rc=");
-        Serial.println(mqttClientSmartMeter.state());
-        mqttIsConnectSmartMeter = "NG";
-    }
-    return mqttClientSmartMeter.connected();
 }
 
 void callback(char *topic, byte *payload, unsigned int length)
 {
     getTopic = (String)topic;
+    //Serial.println(getTopic);
     for (int i = 0; i < MAX_MSGSIZE; i++)
     {
         getPayload[i] = '\0';
@@ -156,7 +130,6 @@ void callback(char *topic, byte *payload, unsigned int length)
     {
         getPayload[i] = (char)payload[i];
     }
-    //Serial.println(getTopic);
     Serial.println((String)getPayload);
 
     // データを抜き出す
@@ -343,7 +316,7 @@ void DispNefryDisplay()
     NefryDisplay.setFont(ArialMT_Plain_10);
 //    NefryDisplay.drawString(0, 0, ipStr);
     NefryDisplay.drawString(0, 0, tmpGoogleHomeIP);
-    NefryDisplay.drawString(0, 10, "MQTT Gh:" + mqttIsConnectGoogleHome + " Sm:" + mqttIsConnectSmartMeter);
+    NefryDisplay.drawString(0, 10, "MQTT :" + mqttIsConnect);
 
     // MQTT
     NefryDisplay.drawString(0, 20, (String)ctime(&getTs));
@@ -362,7 +335,6 @@ void setup()
     Nefry.setStoreTitle(voiceTextAPIKeyTag, voiceTextAPIKeyIdx);
     Nefry.setStoreTitle(mqttStartCharTag, mqttStartCharIdx);
     Nefry.setStoreTitle(mqttEndCharTag, mqttEndCharIdx);
-    Nefry.setStoreTitle(beebotteSmartMeterTag, beebotteSmartMeterIdx);
     Nefry.setStoreTitle(smartMeterIDTag, smartMeterIDIdx);
     Nefry.setStoreTitle(smartMeterPWTag, smartMeterPWIdx);    
     Nefry.setLed(0, 0, 0);
@@ -383,21 +355,12 @@ void setup()
     // MQTT
     espClient.setCACert(beebottle_ca_cert);
     uint64_t chipid = ESP.getEfuseMac();
-    String tmp = "ESP32GoogleHome-" + String((uint16_t)(chipid >> 32), HEX);
+    String tmp = "ESP32-" + String((uint16_t)(chipid >> 32), HEX);
     clientId = tmp.c_str();
     //NefryのDataStoreに書き込んだToken(String)を(const char*)に変換
     bbt_token = "token:";
     bbt_token += Nefry.getStoreStr(beebotteTokenIdx);
     mqttClient.setCallback(callback);
-
-    // MQTT(SmartMeter)
-    espClientSmartMeter.setCACert(beebottle_ca_cert);
-    uint64_t chipidSmartMeter = ESP.getEfuseMac();
-    tmp = "ESP32SmartMeter-" + String((uint16_t)(chipidSmartMeter >> 32), HEX);
-    clientIdSmartMeter = tmp.c_str();
-    //NefryのDataStoreに書き込んだToken(String)を(const char*)に変換
-    bbt_tokenSmartMeter = "token:";
-    bbt_tokenSmartMeter += Nefry.getStoreStr(beebotteSmartMeterIdx);
 
     // VoiceText API
     tts_user = Nefry.getStoreStr(voiceTextAPIKeyIdx);
@@ -456,16 +419,6 @@ void loop()
         mqttClient.loop();
     }
 
-    // MQTT Client(SmartMeter)へ接続
-    if (!mqttClientSmartMeter.connected())
-    {
-        reconnectSmartMeter();
-    }
-    else
-    {
-        mqttClientSmartMeter.loop();
-    }
-
     if (sendTrigger)
     {
         Serial.println("Message Send To GoogleHome");
@@ -514,10 +467,10 @@ void loop()
             serializeJson(rootTotal, bufferTotal);
             Serial.println(bufferTotal);
 
-            if (mqttClientSmartMeter.connected())
+            if (mqttClient.connected())
             {
-                mqttClientSmartMeter.publish(topicData, bufferData, QoS);
-                mqttClientSmartMeter.publish(topicTotal, bufferTotal, QoS);
+                mqttClient.publish(topicData, bufferData, QoS);
+                mqttClient.publish(topicTotal, bufferTotal, QoS);
                 Serial.println(F("MQTT(SmartMeter) publish!"));
                 Nefry.setLed(0, 0, 0);
             }
