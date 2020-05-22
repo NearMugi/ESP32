@@ -16,7 +16,7 @@ void bp35a1::init(int PIN_RX, int PIN_TX, String id, String pw)
     serviceID = id;
     servicePW = pw;
     isConnect = false;
-    isPhysicalConnect = true;   //物理的に接続できている前提
+    isPhysicalConnect = true; //物理的に接続できている前提
 
     epA = 0.0f;
     epkW = 0.0f;
@@ -149,9 +149,9 @@ bool bp35a1::chkResponceOK(unsigned long chkTime)
 
 void bp35a1::connect()
 {
-    if(!isPhysicalConnect)
+    if (!isPhysicalConnect)
         return;
-        
+
     if (isConnect)
         return;
 
@@ -311,9 +311,16 @@ void bp35a1::getEPValue()
         String stringE1 = tmp.substring(36 + 4, 36 + 6);
         String stringEA = tmp.substring(42 + 4);
 
-        // 瞬時電力(0.1A)・電流値(W)
-        epA = (float)(hexToDec(stringE7)) * 0.1;
-        epkW = (float)hexToDec(stringE8) * 0.001;
+        // 瞬時電力値 w -> kwに変換
+        epkW = (float)hexToDec(stringE7) * 0.001;
+
+        // 瞬時電流値
+        // R相 4byte + T相 4byte
+        // 0.1A -> 1Aに変換
+        float epAR = (float)(hexToDec(stringE8.substring(0, 4)));
+        float epAT = (float)(hexToDec(stringE8.substring(4)));
+        epA = (epAR + epAT) * 0.1;
+
         // 係数
         float coefficient = hexToDec(stringD3);
         // 積算電力量単位
