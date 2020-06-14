@@ -18,7 +18,7 @@ void setting()
 NefrySetting nefrySetting(setting);
 
 // ループ周期(ms)
-#define LOOPTIME_READ 10 * 1000
+#define LOOPTIME_READ 1 * 1000
 #define LOOPTIME_SEND 60 * 5 * 1000
 
 // Nefry Environment data
@@ -122,6 +122,7 @@ void loop()
     // Read LoadCell
     interval<LOOPTIME_READ>::run([] {
         readLoadCell = lc.getData();
+        //Serial.println(readLoadCell);
     });
 
     // Send
