@@ -18,8 +18,8 @@ void setting()
 NefrySetting nefrySetting(setting);
 
 // ループ周期(ms)
-#define LOOPTIME_READ 5 * 1000
-#define LOOPTIME_SEND 60 * 1 * 1000
+#define LOOPTIME_READ 10 * 1000
+#define LOOPTIME_SEND 60 * 5 * 1000
 
 // Nefry Environment data
 #define beebotteTokenIdx 0
@@ -69,7 +69,7 @@ bool reconnect()
 void DispNefryDisplay()
 {
     NefryDisplay.clear();
-    NefryDisplay.setFont(ArialMT_Plain_16);
+    NefryDisplay.setFont(ArialMT_Plain_10);
     NefryDisplay.drawString(0, 0, ipStr);
     NefryDisplay.drawString(0, 17, "MQTT :" + mqttIsConnect);
 
@@ -98,9 +98,6 @@ void setup()
     NefryDisplay.begin();
     NefryDisplay.setAutoScrollFlg(true); //自動スクロールを有効
     NefryDisplay.autoScrollFunc(DispNefryDisplay);
-
-    NefryDisplay.clear();
-    NefryDisplay.display();
 
     // MQTT
     espClient.setCACert(beebottle_ca_cert);
