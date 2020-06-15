@@ -30,8 +30,8 @@ const char *host = "mqtt.beebotte.com";
 int QoS = 1;
 const char *clientId;
 String bbt_token;
-WiFiClientSecure espClient;
-PubSubClient mqttClient(host, 8883, espClient);
+WiFiClient espClient;
+PubSubClient mqttClient(host, 1883, espClient);
 
 // LoadCell
 loadCell lc;
@@ -100,7 +100,7 @@ void setup()
     NefryDisplay.autoScrollFunc(DispNefryDisplay);
 
     // MQTT
-    espClient.setCACert(beebottle_ca_cert);
+    //espClient.setCACert(beebottle_ca_cert);
     uint64_t chipid = ESP.getEfuseMac();
     String tmp = "ESP32-" + String((uint16_t)(chipid >> 32), HEX);
     clientId = tmp.c_str();
@@ -118,6 +118,7 @@ void loop()
     {
         reconnect();
     }
+    mqttClient.loop();
 
     // Read LoadCell
     interval<LOOPTIME_READ>::run([] {
@@ -146,7 +147,7 @@ void loop()
         if (mqttClient.connected())
         {
             mqttClient.publish(topicWeight, bufferData, QoS);
-            Serial.println(F("MQTT(SmartMeter) publish!"));
+            Serial.println(F("MQTT(LoadCell) publish!"));
             Nefry.setLed(0, 0, 0);
         }
     });
