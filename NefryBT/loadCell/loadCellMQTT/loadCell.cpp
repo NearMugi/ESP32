@@ -15,6 +15,11 @@ void loadCell::init(int _pin_dout, int _pin_slk, float _outVolt, float _load)
     offset = AE_HX711_getGram(50);
 }
 
+void loadCell::setOffset(float v)
+{
+    offset = v;
+}
+
 float loadCell::getData()
 {
     float data = AE_HX711_getGram(10) - offset;

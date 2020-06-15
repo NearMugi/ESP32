@@ -5,6 +5,7 @@ class loadCell
 {
 public:
     void init(int _pin_dout, int _pin_slk, float _outVolt, float _load);
+    void setOffset(float v);
     float getData();
 
 private:

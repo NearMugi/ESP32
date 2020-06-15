@@ -90,10 +90,10 @@ void setup()
     Nefry.setStoreTitle(beebotteTokenTag, beebotteTokenIdx);
     Nefry.setLed(0, 0, 0);
 
-    //date
+    // date
     configTime(JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
     sendTs = 0;
-    //displayMessage
+    // displayMessage
     IPAddress ip = WiFi.localIP();
     ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
 
@@ -106,22 +106,23 @@ void setup()
     uint64_t chipid = ESP.getEfuseMac();
     String tmp = "ESP32-" + String((uint16_t)(chipid >> 32), HEX);
     clientId = tmp.c_str();
-    //NefryのDataStoreに書き込んだToken(String)を(const char*)に変換
+    // NefryのDataStoreに書き込んだToken(String)を(const char*)に変換
     bbt_token = "token:";
     bbt_token += Nefry.getStoreStr(beebotteTokenIdx);
 
     lc.init(pin_dout, pin_slk, OUT_VOL, LOAD);
-
+    // 再起動の度にキャリブレーションされるので、オフセットは使わない
+    lc.setOffset(0.0f);
     readLoadCell = lc.getData();
 
-    //日付を取得する
+    // 日付を取得する
     sendTs = time(NULL);
     struct tm *tm;
     tm = localtime(&sendTs);
     char getDate[15] = "";
     sprintf(getDate, "%04d%02d%02d%02d%02d%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 
-    // mqtt送信向けにJsonデータを生成する
+    // MQTT送信向けにJsonデータを生成する
     char bufferData[200];
     StaticJsonDocument<200> root;
     root["date"] = getDate;
@@ -129,6 +130,7 @@ void setup()
     serializeJson(root, bufferData);
     Serial.println(bufferData);
 
+    // MQTT送信
     reconnect();
     mqttClient.publish(topicWeight, bufferData, QoS);
     Serial.println(F("MQTT(LoadCell) publish!"));
