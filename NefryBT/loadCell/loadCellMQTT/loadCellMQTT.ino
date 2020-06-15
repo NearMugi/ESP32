@@ -17,9 +17,9 @@ void setting()
 }
 NefrySetting nefrySetting(setting);
 
-// ループ周期(ms)
-#define LOOPTIME_READ 1 * 1000
-#define LOOPTIME_SEND 60 * 5 * 1000
+//sleep
+unsigned long ofsTime;
+int sleepTime;
 
 // Nefry Environment data
 #define beebotteTokenIdx 0
@@ -30,8 +30,8 @@ const char *host = "mqtt.beebotte.com";
 int QoS = 1;
 const char *clientId;
 String bbt_token;
-WiFiClient espClient;
-PubSubClient mqttClient(host, 1883, espClient);
+WiFiClientSecure espClient;
+PubSubClient mqttClient(host, 8883, espClient);
 
 // LoadCell
 loadCell lc;
@@ -84,6 +84,8 @@ void DispNefryDisplay()
 
 void setup()
 {
+    ofsTime = millis();
+
     Nefry.setProgramName("Send LoadCell Value to MQTT");
     Nefry.setStoreTitle(beebotteTokenTag, beebotteTokenIdx);
     Nefry.setLed(0, 0, 0);
@@ -100,7 +102,7 @@ void setup()
     NefryDisplay.autoScrollFunc(DispNefryDisplay);
 
     // MQTT
-    //espClient.setCACert(beebottle_ca_cert);
+    espClient.setCACert(beebottle_ca_cert);
     uint64_t chipid = ESP.getEfuseMac();
     String tmp = "ESP32-" + String((uint16_t)(chipid >> 32), HEX);
     clientId = tmp.c_str();
@@ -109,46 +111,42 @@ void setup()
     bbt_token += Nefry.getStoreStr(beebotteTokenIdx);
 
     lc.init(pin_dout, pin_slk, OUT_VOL, LOAD);
+
+    readLoadCell = lc.getData();
+
+    //日付を取得する
+    sendTs = time(NULL);
+    struct tm *tm;
+    tm = localtime(&sendTs);
+    char getDate[15] = "";
+    sprintf(getDate, "%04d%02d%02d%02d%02d%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
+
+    // mqtt送信向けにJsonデータを生成する
+    char bufferData[200];
+    StaticJsonDocument<200> root;
+    root["date"] = getDate;
+    root["weight"] = readLoadCell;
+    serializeJson(root, bufferData);
+    Serial.println(bufferData);
+
+    reconnect();
+    mqttClient.publish(topicWeight, bufferData, QoS);
+    Serial.println(F("MQTT(LoadCell) publish!"));
+
+    delay(5000);
 }
 
 void loop()
 {
-    // MQTT Clientへ接続
-    if (!mqttClient.connected())
-    {
-        reconnect();
-    }
-    mqttClient.loop();
-
-    // Read LoadCell
-    interval<LOOPTIME_READ>::run([] {
-        readLoadCell = lc.getData();
-        //Serial.println(readLoadCell);
-    });
-
-    // Send
-    interval<LOOPTIME_SEND>::run([] {
-        Nefry.setLed(128, 128, 0);
-        //日付を取得する
-        sendTs = time(NULL);
-        struct tm *tm;
-        tm = localtime(&sendTs);
-        char getDate[15] = "";
-        sprintf(getDate, "%04d%02d%02d%02d%02d%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
-
-        // mqtt送信向けにJsonデータを生成する
-        char bufferData[200];
-        StaticJsonDocument<200> root;
-        root["date"] = getDate;
-        root["weight"] = readLoadCell;
-        serializeJson(root, bufferData);
-        Serial.println(bufferData);
-
-        if (mqttClient.connected())
-        {
-            mqttClient.publish(topicWeight, bufferData, QoS);
-            Serial.println(F("MQTT(LoadCell) publish!"));
-            Nefry.setLed(0, 0, 0);
-        }
-    });
+    // 5分周期
+    ofsTime = millis() - ofsTime;                   //ms
+    sleepTime = 300 - (int)((float)ofsTime / 1000); //sec
+    String _tmp = String(sleepTime);
+    _tmp += "s";
+    NefryDisplay.clear();
+    NefryDisplay.setFont(ArialMT_Plain_24);
+    NefryDisplay.drawString(20, 5, "SLEEP....");
+    NefryDisplay.drawString(20, 35, _tmp);
+    NefryDisplay.display();
+    Nefry.sleep(sleepTime);
 }
