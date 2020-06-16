@@ -1,5 +1,6 @@
 // ロードセルを使って重さを測定する
 // サンプルコード http://akizukidenshi.com/catalog/g/gK-12370/
+// Sleep機能を使った定期実行
 #include <Nefry.h>
 #include <NefryDisplay.h>
 #include <NefrySetting.h>
@@ -86,7 +87,7 @@ void setup()
 {
     ofsTime = millis();
 
-    Nefry.setProgramName("Send LoadCell Value to MQTT");
+    Nefry.setProgramName("Send LoadCell Value to MQTT（SleepType)");
     Nefry.setStoreTitle(beebotteTokenTag, beebotteTokenIdx);
     Nefry.setLed(0, 0, 0);
 
