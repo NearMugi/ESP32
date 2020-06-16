@@ -9,7 +9,6 @@
 #include <time.h>
 #include <WiFiClientSecure.h>
 #include "mqttConfig.h"
-#include "intervalMs.h"
 #include "loadCell.h"
 
 void setting()
