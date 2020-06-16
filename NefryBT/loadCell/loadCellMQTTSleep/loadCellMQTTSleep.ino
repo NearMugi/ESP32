@@ -111,8 +111,8 @@ void setup()
     bbt_token += Nefry.getStoreStr(beebotteTokenIdx);
 
     lc.init(pin_dout, pin_slk, OUT_VOL, LOAD);
-    // 再起動の度にキャリブレーションされるので、オフセットは使わない
-    lc.setOffset(0.0f);
+    // 再起動の度にキャリブレーションされるので、オフセットは固定値にする
+    lc.setOffset(7755.83f);
     readLoadCell = lc.getData();
 
     // 日付を取得する

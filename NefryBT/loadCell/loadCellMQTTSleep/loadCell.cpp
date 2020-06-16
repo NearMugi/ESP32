@@ -13,6 +13,7 @@ void loadCell::init(int _pin_dout, int _pin_slk, float _outVolt, float _load)
     AE_HX711_Init();
     AE_HX711_Reset();
     offset = AE_HX711_getGram(50);
+    Serial.println(offset);
 }
 
 void loadCell::setOffset(float v)
