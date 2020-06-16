@@ -100,7 +100,7 @@ void setup()
     NefryDisplay.autoScrollFunc(DispNefryDisplay);
 
     // MQTT
-    //espClient.setCACert(beebottle_ca_cert);
+    espClient.setCACert(beebottle_ca_cert);
     uint64_t chipid = ESP.getEfuseMac();
     String tmp = "ESP32-" + String((uint16_t)(chipid >> 32), HEX);
     clientId = tmp.c_str();
