@@ -30,8 +30,8 @@ const char *host = "mqtt.beebotte.com";
 int QoS = 1;
 const char *clientId;
 String bbt_token;
-WiFiClient espClient;
-PubSubClient mqttClient(host, 1883, espClient);
+WiFiClientSecure espClient;
+PubSubClient mqttClient(host, 8883, espClient);
 
 // LoadCell
 loadCell lc;
