@@ -3,3 +3,4 @@ node_modules
 mqttConfig.h
 mqtt.beebotte.com.pem*
 mqttConfigShiftr.h
+secretConfig.h
