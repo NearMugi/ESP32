@@ -1,3 +1,4 @@
+// スマートメーターの値を取得してMQTTを送信する
 #include <Nefry.h>
 #include <NefryDisplay.h>
 #include <NefrySetting.h>
@@ -15,13 +16,15 @@ void setting()
 }
 NefrySetting nefrySetting(setting);
 
-bp35a1 bp;
+// NefryDisplayMessage
+String mqttIsConnect;
+String ipStr; //ipアドレス
 #define JST 3600 * 9
 
 // Nefry Environment data
 
-#define beebotteSmartMeterIdx 7
-#define beebotteSmartMeterTag "Beebotte SmartMeter Token"
+#define beebotteSmartMeterIdx 0
+#define beebotteSmartMeterTag "Beebotte Token"
 #define smartMeterIDIdx 8
 #define smartMeterIDTag "Smart Meter ID"
 #define smartMeterPWIdx 9
@@ -30,9 +33,9 @@ bp35a1 bp;
 // ループ周期(ms)
 
 // 即時電力値・電流値・累積電力値を取得
-#define LOOPTIME_GET_EP_VALUE 60 * 1000
+#define LOOPTIME_GET_EP_VALUE 60 * 5 * 1000
 // 接続確認
-#define LOOPTIME_CHECK_CONNECT 30 * 1000
+#define LOOPTIME_CHECK_CONNECT 60 * 4 * 1000
 
 // MQTT
 const char *host = "mqtt.beebotte.com";
@@ -42,6 +45,10 @@ String bbt_token;
 WiFiClientSecure espClient;
 PubSubClient mqttClient(host, 8883, espClient);
 
+// SmartMeter
+bp35a1 bp;
+time_t sendTs;
+
 bool reconnect()
 {
     Serial.print(F("\nAttempting MQTT connection..."));
@@ -50,13 +57,30 @@ bool reconnect()
     if (mqttClient.connect(clientId, user, NULL))
     {
         Serial.println("connected");
+        mqttIsConnect = "OK";
     }
     else
     {
         Serial.print("failed, rc=");
         Serial.println(mqttClient.state());
+        mqttIsConnect = "NG";
     }
     return mqttClient.connected();
+}
+
+void DispNefryDisplay()
+{
+    NefryDisplay.clear();
+
+    NefryDisplay.setFont(ArialMT_Plain_10);
+    NefryDisplay.drawString(0, 0, ipStr);
+    NefryDisplay.drawString(0, 10, "MQTT :" + mqttIsConnect);
+
+    // MQTT
+    NefryDisplay.drawString(0, 40, (String)ctime(&sendTs));
+
+    NefryDisplay.display();
+    Nefry.ndelay(500);
 }
 
 void setup()
@@ -65,6 +89,19 @@ void setup()
     Nefry.setStoreTitle(beebotteSmartMeterTag, beebotteSmartMeterIdx);
     Nefry.setStoreTitle(smartMeterIDTag, smartMeterIDIdx);
     Nefry.setStoreTitle(smartMeterPWTag, smartMeterPWIdx);
+    Nefry.setLed(0, 0, 0);
+
+    //　date
+    configTime(JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
+    sendTs = 0;
+
+    //displayMessage
+    IPAddress ip = WiFi.localIP();
+    ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
+
+    NefryDisplay.begin();
+    NefryDisplay.setAutoScrollFlg(true); //自動スクロールを有効
+    NefryDisplay.autoScrollFunc(DispNefryDisplay);
 
     // MQTT
     espClient.setCACert(beebottle_ca_cert);
@@ -74,9 +111,6 @@ void setup()
     //NefryのDataStoreに書き込んだToken(String)を(const char*)に変換
     bbt_token = "token:";
     bbt_token += Nefry.getStoreStr(beebotteSmartMeterIdx);
-
-    //　date
-    configTime(JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
 
     // シリアル通信するポート(RX:D2=23, TX:D3=19);
     int PIN_RX = 23;
@@ -106,14 +140,19 @@ void loop()
     });
 
     interval<LOOPTIME_GET_EP_VALUE>::run([] {
+        Nefry.setLed(128, 128, 0);
         bp.getEPValue();
 
-        if (bp.epA > 0.0f)
+        if (bp.epA <= 0.0f)
+        {
+            Nefry.setLed(0, 0, 0);
+        }
+        else
         {
             //日付を取得する
-            time_t t = time(NULL);
+            sendTs = time(NULL);
             struct tm *tm;
-            tm = localtime(&t);
+            tm = localtime(&sendTs);
             char getDate[15] = "";
             sprintf(getDate, "%04d%02d%02d%02d%02d%02d", tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
 
@@ -123,7 +162,7 @@ void loop()
             root["date"] = getDate;
             root["a"] = bp.epA;
             root["kw"] = bp.epkW;
-            root["ts"] = t;
+            root["ts"] = sendTs;
             serializeJson(root, bufferData);
             Serial.println(bufferData);
 
@@ -131,7 +170,7 @@ void loop()
             StaticJsonDocument<200> rootTotal;
             rootTotal["date"] = bp.date;
             rootTotal["tkw"] = bp.totalkWh;
-            rootTotal["ts"] = t;
+            rootTotal["ts"] = sendTs;
             serializeJson(rootTotal, bufferTotal);
             Serial.println(bufferTotal);
 
@@ -140,6 +179,7 @@ void loop()
                 mqttClient.publish(topicData, bufferData, QoS);
                 mqttClient.publish(topicTotal, bufferTotal, QoS);
                 Serial.println(F("MQTT publish!"));
+                Nefry.setLed(0, 0, 0);
             }
         }
     });
