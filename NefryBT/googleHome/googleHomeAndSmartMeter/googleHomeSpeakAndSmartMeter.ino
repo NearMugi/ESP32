@@ -4,7 +4,7 @@
 //
 // MQTTで受信できるデータ数が限られているので、分割したデータを受信する
 // メッセージ開始のキーワードを受信したら初期化、終了のキーワードを受信したらGoogleHomeで再生する
-// 
+//
 // スマートメーターの値を取得してMQTTを送信する
 
 #include <Nefry.h>
@@ -27,6 +27,10 @@ void setting()
     Nefry.disableDisplayStatus();
 }
 NefrySetting nefrySetting(setting);
+
+// Error escape
+#define ERR_MAX_CNT 5
+int errCnt;
 
 // Nefry Environment data
 #define beebotteTokenIdx 0
@@ -314,7 +318,7 @@ void DispNefryDisplay()
 
     String tmpGoogleHomeIP = "GoogleHome:" + googleHomeIPStr;
     NefryDisplay.setFont(ArialMT_Plain_10);
-//    NefryDisplay.drawString(0, 0, ipStr);
+    //    NefryDisplay.drawString(0, 0, ipStr);
     NefryDisplay.drawString(0, 0, tmpGoogleHomeIP);
     NefryDisplay.drawString(0, 10, "MQTT :" + mqttIsConnect);
 
@@ -336,15 +340,18 @@ void setup()
     Nefry.setStoreTitle(mqttStartCharTag, mqttStartCharIdx);
     Nefry.setStoreTitle(mqttEndCharTag, mqttEndCharIdx);
     Nefry.setStoreTitle(smartMeterIDTag, smartMeterIDIdx);
-    Nefry.setStoreTitle(smartMeterPWTag, smartMeterPWIdx);    
+    Nefry.setStoreTitle(smartMeterPWTag, smartMeterPWIdx);
     Nefry.setLed(0, 0, 0);
 
-    //date
+    // error Count
+    errCnt = 0;
+
+    // date
     configTime(JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
     getTs = 0;
     sendTs = 0;
 
-    //displayMessage
+    // displayMessage
     IPAddress ip = WiFi.localIP();
     ipStr = String(ip[0]) + '.' + String(ip[1]) + '.' + String(ip[2]) + '.' + String(ip[3]);
 
@@ -407,6 +414,12 @@ void setup()
 
 void loop()
 {
+    // エラーが所定回数以上の場合、リセットする
+    if (errCnt >= ERR_MAX_CNT)
+    {
+        Nefry.reset();
+    }
+
     bp.connect();
 
     // MQTT Clientへ接続
@@ -440,7 +453,8 @@ void loop()
         if (bp.epA <= 0.0f)
         {
             Nefry.setLed(0, 0, 0);
-        } else 
+        }
+        else
         {
             //日付を取得する
             sendTs = time(NULL);
@@ -473,6 +487,11 @@ void loop()
                 mqttClient.publish(topicTotal, bufferTotal, QoS);
                 Serial.println(F("MQTT(SmartMeter) publish!"));
                 Nefry.setLed(0, 0, 0);
+                errCnt = 0;
+            }
+            else
+            {
+                errCnt++;
             }
         }
     });
