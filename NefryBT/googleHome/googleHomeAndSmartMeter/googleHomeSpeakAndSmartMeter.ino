@@ -65,7 +65,7 @@ int errCnt;
 
 // MQTT
 const char *host = "mqtt.beebotte.com";
-int QoS = 1;
+int QoS = 0;
 const char *clientId;
 String bbt_token;
 WiFiClientSecure espClient;
@@ -106,6 +106,10 @@ bool reconnect()
 {
     Serial.print("Attempting MQTT connection...");
     // Attempt to connect
+    uint64_t chipid = ESP.getEfuseMac();
+    String tmp = "ESP32-" + String((uint16_t)(chipid >> 32), HEX);
+    tmp += String(random(0xffff), HEX);
+    clientId = tmp.c_str();
     const char *user = bbt_token.c_str();
     if (mqttClient.connect(clientId, user, NULL))
     {
@@ -361,9 +365,6 @@ void setup()
 
     // MQTT
     espClient.setCACert(beebottle_ca_cert);
-    uint64_t chipid = ESP.getEfuseMac();
-    String tmp = "ESP32-" + String((uint16_t)(chipid >> 32), HEX);
-    clientId = tmp.c_str();
     //NefryのDataStoreに書き込んだToken(String)を(const char*)に変換
     bbt_token = "token:";
     bbt_token += Nefry.getStoreStr(beebotteTokenIdx);
