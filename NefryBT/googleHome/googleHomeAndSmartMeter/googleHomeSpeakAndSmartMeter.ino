@@ -29,7 +29,7 @@ void setting()
 NefrySetting nefrySetting(setting);
 
 // Error escape
-#define ERR_MAX_CNT 5
+#define ERR_MAX_CNT 3
 int errCnt;
 
 // Nefry Environment data
@@ -415,12 +415,19 @@ void setup()
 
 void loop()
 {
+    // Wifiに接続できていない時、リセットする
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        Nefry.reset();
+    }
+
     // エラーが所定回数以上の場合、リセットする
     if (errCnt >= ERR_MAX_CNT)
     {
         Nefry.reset();
     }
 
+    // スマートメーターに接続
     bp.connect();
 
     // MQTT Clientへ接続
@@ -454,6 +461,7 @@ void loop()
         if (bp.epA <= 0.0f)
         {
             Nefry.setLed(0, 0, 0);
+            bp.reConnect();
         }
         else
         {
@@ -470,6 +478,7 @@ void loop()
             root["date"] = getDate;
             root["a"] = bp.epA;
             root["kw"] = bp.epkW;
+            root["err"] = errCnt;
             root["ts"] = sendTs;
             serializeJson(root, bufferData);
             Serial.println(bufferData);

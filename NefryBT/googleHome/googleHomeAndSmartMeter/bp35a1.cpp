@@ -349,3 +349,7 @@ void bp35a1::getEPValue()
 #endif
     }
 }
+
+void bp35a1::reConnect(){
+    isConnect = false;
+}

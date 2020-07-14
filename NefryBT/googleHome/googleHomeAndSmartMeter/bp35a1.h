@@ -21,6 +21,7 @@ public:
     void connect();
     void chkConnect();
     void getEPValue();
+    void reConnect();
 
     // 瞬時電力(A)
     float epA;
