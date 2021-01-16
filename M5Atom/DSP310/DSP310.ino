@@ -1,13 +1,23 @@
+#include <Arduino.h>
+#include "env.h"
+#include <WiFi.h>
+#include <WiFiMulti.h>
+
 #include <memory>
 #include "m5AtomBase.h"
 #include <Dps310.h>
+#include "amedas.h"
 Dps310 dps310_ = Dps310();
 m5AtomBase m5Atom;
 
+WiFiMulti WiFiMulti;
+const String posID = "44132";
+amedas amedasData(posID);
+
 // https://www.jma.go.jp/jp/amedas_h/today-44132.html
 const float baseH = 25.0;
-float baseP = 1012.2;
-float baseT = 3.9;
+float baseP = 1013.0;
+float baseT = 0.0;
 
 // 海面気圧
 float p0;
@@ -19,6 +29,22 @@ void setup()
     Wire.begin(26, 32);
     delay(10);
     dps310_.begin(Wire, 0x77);
+
+    Serial.begin(115200);
+    WiFi.mode(WIFI_STA);
+    WiFiMulti.addAP(ssid, pw);
+
+    // wait for WiFi connection
+    Serial.print("Waiting for WiFi to connect...");
+    while ((WiFiMulti.run() != WL_CONNECTED))
+    {
+        Serial.print(".");
+    }
+    Serial.println(" connected");
+
+    amedasData.getData();
+    baseP = amedasData.getLastPressure();
+    baseT = amedasData.getLastTemperature();
 
     // 海面気圧を算出する
     // https://keisan.casio.jp/exec/system/1203302206
