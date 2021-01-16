@@ -4,3 +4,4 @@ mqttConfig.h
 mqtt.beebotte.com.pem*
 mqttConfigShiftr.h
 secretConfig.h
+env.h

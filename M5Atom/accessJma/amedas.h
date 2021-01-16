@@ -51,6 +51,8 @@ public:
     amedas(int _id) : _tblData(), _lastData(), posID(String(_id)){};
     ~amedas(){};
     bool getData();
+    float getLastTemperature() const { return _lastData.getTemperature(); };
+    float getLastPressure() const { return _lastData.getPressure(); };
 
 private:
     std::vector<unitAmedasData> _tblData;
