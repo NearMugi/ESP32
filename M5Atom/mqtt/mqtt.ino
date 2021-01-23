@@ -1,42 +1,22 @@
 #include <Arduino.h>
 #include <WiFi.h>
-#include <PubSubClient.h>
 #include <time.h>
-#include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include "intervalMs.h"
 
 #include "env.h"
-#include "mqttConfig.h"
-
 #include "m5AtomBase.h"
 
-// MQTT
+// LoopTime
 const int LOOPTIME_MQTT = 1 * 1000;
-int mqttConnectErr = 0;
-WiFiClientSecure espClient;
-PubSubClient mqttClient(host, 8883, espClient);
 
-bool reconnect()
-{
-    Serial.println("Attempting MQTT connection...");
-    if (mqttClient.connect(clientId, token, NULL))
-    {
-        Serial.println("connected");
-        mqttClient.subscribe(topicSub);
-    }
-    else
-    {
-        Serial.print("failed, rc=");
-        Serial.println(mqttClient.state());
-    }
-    return mqttClient.connected();
-}
-
-void callback(char *topic, byte *payload, unsigned int length)
+#include "mqttESP32.h"
+// Subscribe
+static void mqttCallback(char *topic, byte *payload, unsigned int length)
 {
     Serial.println((String)topic);
 }
+mqttESP32 _mqtt(&mqttCallback);
 
 void setup()
 {
@@ -56,31 +36,27 @@ void setup()
     Serial.println(WiFi.localIP());
 
     configTime(3600 * 9, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
-    // MQTT
-    mqttConnectErr = 0;
-    espClient.setCACert(beebottle_ca_cert);
-    mqttClient.setCallback(callback);
 }
 
 void loop()
 {
-    if (!mqttClient.connected())
+    if (_mqtt.getMqttState() != 0)
     {
-        reconnect();
-        mqttConnectErr++;
+        Serial.println("Attempting MQTT connection...");
+        _mqtt.chkConnect();
+        Serial.print("State(0->OK) : ");
+        Serial.println(_mqtt.getMqttState());
+        Serial.print("ConnectErr Count : ");
+        Serial.println(_mqtt.getMqttConnectErr());
+        if (_mqtt.getMqttConnectErr() > 3)
+        {
+            ESP.restart();
+        }
     }
-    else
-    {
-        mqttConnectErr = 0;
-    }
-    mqttClient.loop();
-    if (mqttConnectErr > 3)
-    {
-        ESP.restart();
-    }
+    _mqtt.loop();
 
     interval<LOOPTIME_MQTT>::run([] {
-        if (!mqttClient.connected())
+        if (_mqtt.getMqttState() != 0)
             return;
         //日付を取得する
         time_t sendTs = time(NULL);
@@ -93,11 +69,12 @@ void loop()
         char bufferData[200];
         StaticJsonDocument<200> root;
         root["data"] = getDate;
+        root["err"] = _mqtt.getMqttConnectErr();
         root["ispublic"] = false;
         root["ts"] = sendTs;
         serializeJson(root, bufferData);
         Serial.println(bufferData);
 
-        mqttClient.publish(topicPub, bufferData);
+        _mqtt.publish(bufferData);
     });
 }
