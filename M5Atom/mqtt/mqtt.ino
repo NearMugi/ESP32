@@ -14,7 +14,18 @@ const int LOOPTIME_MQTT = 1 * 1000;
 // Subscribe
 static void mqttCallback(char *topic, byte *payload, unsigned int length)
 {
+    const int MAX_MSGSIZE = 100;
+    char getPayload[MAX_MSGSIZE];
     Serial.println((String)topic);
+    for (int i = 0; i < MAX_MSGSIZE; i++)
+    {
+        getPayload[i] = '\0';
+    }
+    for (int i = 0; i < length; i++)
+    {
+        getPayload[i] = (char)payload[i];
+    }
+    Serial.println((String)getPayload);
 }
 mqttESP32 _mqtt(&mqttCallback);
 
