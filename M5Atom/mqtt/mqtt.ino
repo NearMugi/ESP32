@@ -10,6 +10,7 @@
 // LoopTime
 const int LOOPTIME_MQTT = 1 * 1000;
 
+#include "mqttConfig.h"
 #include "mqttESP32.h"
 // Subscribe
 static void mqttCallback(char *topic, byte *payload, unsigned int length)
@@ -27,7 +28,11 @@ static void mqttCallback(char *topic, byte *payload, unsigned int length)
     }
     Serial.println((String)getPayload);
 }
-mqttESP32 _mqtt(&mqttCallback);
+mqttESP32 _mqtt(
+    host,
+    topicPub, topicSub,
+    clientId, token, beebottle_ca_cert,
+    &mqttCallback);
 
 void setup()
 {

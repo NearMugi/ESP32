@@ -1,9 +1,21 @@
 #include "mqttESP32.h"
-#include "mqttConfig.h"
-mqttESP32::mqttESP32(void (*callback)(char *, byte *, unsigned int)) : mqttConnectErr(0), mqttState(-1), mqttClient(host, 8883, espClient)
+mqttESP32::mqttESP32(
+    const char *_host,
+    const char *_topicPub, const char *_topicSub,
+    const char *_clientId, const char *_token, const char *_caCert,
+    void (*callback)(char *, byte *, unsigned int))
+    : mqttConnectErr(0), mqttState(-1), mqttClient(espClient)
 {
-    espClient.setCACert(beebottle_ca_cert);
+    host = const_cast<const char *>(_host);
+    topicPub = const_cast<const char *>(_topicPub);
+    topicSub = const_cast<const char *>(_topicSub);
+    clientId = const_cast<const char *>(_clientId);
+    token = const_cast<const char *>(_token);
+    caCert = const_cast<const char *>(_caCert);
+
+    mqttClient.setServer(host, 8883);
     mqttClient.setCallback(callback);
+    espClient.setCACert(caCert);
 };
 
 int mqttESP32::chkConnect()

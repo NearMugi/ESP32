@@ -6,9 +6,12 @@
 class mqttESP32
 {
 public:
-    mqttESP32(void (*callback)(char *, byte *, unsigned int));
+    mqttESP32(
+        const char *_host,
+        const char *_topicPub, const char *_topicSub,
+        const char *_clientId, const char *_token, const char *_caCert,
+        void (*callback)(char *, byte *, unsigned int));
     virtual ~mqttESP32(){};
-    void setCallback();
     int chkConnect();
     void loop();
     void publish(char *bufferData);
@@ -22,6 +25,13 @@ private:
     mqttESP32 &operator=(const mqttESP32 &);
     WiFiClientSecure espClient;
     PubSubClient mqttClient;
+
+    const char *host;
+    const char *topicPub;
+    const char *topicSub;
+    const char *clientId;
+    const char *token;
+    const char *caCert;
     int mqttConnectErr;
     int mqttState;
 
