@@ -1,3 +1,6 @@
+// MQTT Sample(https Connect)
+// mqttConfig.h : set to private value
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <time.h>
@@ -5,7 +8,6 @@
 #include "intervalMs.h"
 
 #include "env.h"
-#include "m5AtomBase.h"
 
 // LoopTime
 const int LOOPTIME_MQTT = 1 * 1000;
@@ -36,8 +38,6 @@ mqttESP32 _mqtt(
 
 void setup()
 {
-    M5.begin(true, false, true);
-
     Serial.begin(115200);
     WiFi.begin(ssid, pw);
 

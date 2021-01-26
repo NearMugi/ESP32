@@ -1,0 +1,15 @@
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+mqttESP32	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+chkConnect	KEYWORD2
+loop	KEYWORD2
+publish	KEYWORD2
+getMqttState	KEYWORD2
+getMqttConnectErr	KEYWORD2

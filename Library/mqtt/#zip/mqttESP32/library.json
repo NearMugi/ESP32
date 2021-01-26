@@ -1,0 +1,16 @@
+{
+  "name": "MQTT_ESP32",
+  "description": "MQTT(https) Connect",
+  "keywords": "MQTT_ESP32",
+  "authors": {
+    "name": "NearMugi",
+    "url": "http://"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NearMugi/ESP32"
+  },
+  "version": "0.3.1",
+  "framework": "arduino",
+  "platforms": "espressif32"
+}
