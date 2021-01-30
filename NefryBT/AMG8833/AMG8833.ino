@@ -12,20 +12,11 @@ void setting()
 }
 NefrySetting nefrySetting(setting);
 
+#include "env.h"
+
 //date
 #include <time.h>
 #define JST 3600 * 9
-
-//MQTT
-#define NEFRY_DATASTORE_BEEBOTTE 1
-#define BBT "mqtt.beebotte.com"
-#define QoS 0
-String bbt_token;
-#define Channel "AMG8833"
-#define Res "data"
-char topic[64];
-WiFiClient espClient;
-PubSubClient client(espClient);
 
 const int pixel_array_size = 8 * 8;
 float pixels[pixel_array_size];
@@ -34,33 +25,7 @@ const unsigned int dataSize = 100;
 Adafruit_AMG88xx amg;
 bool status;
 
-void mqttPublish(String _tag, String _data, time_t _t)
-{
-    // Create a random client ID
-    String clientId = "ESP32Client-";
-    clientId += String(random(0xffff), HEX);
-
-    //NefryのDataStoreに書き込んだToken(String)を(const char*)に変換
-    bbt_token = "token:";
-    bbt_token += Nefry.getStoreStr(NEFRY_DATASTORE_BEEBOTTE);
-    const char *tmp = bbt_token.c_str();
-    // Attempt to connect
-    if (client.connect(clientId.c_str(), tmp, ""))
-    {
-        char buffer[dataSize];
-        StaticJsonBuffer<dataSize> jsonOutBuffer;
-        JsonObject &root = jsonOutBuffer.createObject();
-        root[_tag] = _data;
-        root["ts"] = _t;
-
-        // Now print the JSON into a char buffer
-        root.printTo(buffer, sizeof(buffer));
-        Serial.println(buffer);
-
-        // Now publish the char buffer to Beebotte
-        client.publish(topic, buffer, QoS);
-    }
-}
+WiFiClientSecure client;
 
 void setup()
 {
@@ -71,10 +36,6 @@ void setup()
     //date
     configTime(JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
 
-    Nefry.setStoreTitle("MQTT_Token", NEFRY_DATASTORE_BEEBOTTE);
-    client.setServer(BBT, 1883);
-    sprintf(topic, "%s/%s", Channel, Res);
-
     NefryDisplay.clear();
     NefryDisplay.display();
 
@@ -83,15 +44,8 @@ void setup()
 
 void loop()
 {
-    if (!status)
-    {
-        Serial.println("Connect Error...");
-        return;
-    }
-
     amg.readPixels(pixels);
 
-    time_t t = time(NULL);
     String data = "";
     int j = 0;
     int k = 0;
@@ -99,12 +53,43 @@ void loop()
     {
         data += String(pixels[i]);
         data += ",";
-
-        if (++j >= 8)
-        {
-            mqttPublish(String(k++), data, t);
-            j = 0;
-            data = "";
-        }
     }
+
+    Serial.println(data.length());
+    Serial.println(data);
+
+    if (client.connect(host, 443))
+    {
+        String json = "{\"data\":\"" + data + "\"}";
+
+        client.print("POST " + url + " HTTP/1.1\r\n");
+        client.print("Host: " + String(host) + ":443\r\n");
+        client.print("Content-Type: application/json\r\n");
+        client.print("Connection: Keep-Alive\r\n");
+        client.print("Content-Length: " + String(json.length()) + "\r\n");
+        client.print("\r\n");
+        client.print(json + "\r\n");
+
+        unsigned long timeout = millis();
+        while (client.available() == 0)
+        {
+            if (millis() - timeout > 10000)
+            {
+                Serial.println(">>> Client Timeout !");
+                client.stop();
+                return;
+            }
+        }
+
+        while (client.available())
+        {
+            String line = client.readStringUntil('\r');
+            Serial.print(line);
+        }
+
+        Serial.println("closing connection");
+        client.stop();
+    }
+
+    delay(10000);
 }
