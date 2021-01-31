@@ -12,26 +12,30 @@ void setting()
 }
 NefrySetting nefrySetting(setting);
 
+#include "intervalMs.h"
 #include "env.h"
 
 //date
 #include <time.h>
 #define JST 3600 * 9
 
-const int pixel_array_size = 8 * 8;
-float pixels[pixel_array_size];
-const unsigned int dataSize = 100;
+const int PIXEL_ARRAY_SIZE = 8 * 8;
+float pixels[PIXEL_ARRAY_SIZE];
 
 Adafruit_AMG88xx amg;
 bool status;
 
+// Post SpreadSheet
 WiFiClientSecure client;
+String header = "";
+
+// LoopTime
+const int LOOPTIME_POST = 5 * 1000;
 
 void setup()
 {
 
     NefryDisplay.begin();
-    NefryDisplay.setAutoScrollFlg(true); //自動スクロールを有効
 
     //date
     configTime(JST, 0, "ntp.nict.jp", "ntp.jst.mfeed.ad.jp");
@@ -40,56 +44,58 @@ void setup()
     NefryDisplay.display();
 
     status = amg.begin(0x69);
+
+    header = "POST " + url + " HTTP/1.1\r\n";
+    header += "Host: " + String(host) + ":443\r\n";
+    header += "Content-Type: application/json\r\n";
+    header += "Connection: Keep-Alive\r\n";
 }
 
 void loop()
 {
-    amg.readPixels(pixels);
+    interval<LOOPTIME_POST>::run([] {
+        amg.readPixels(pixels);
 
-    String data = "";
-    int j = 0;
-    int k = 0;
-    for (int i = 0; i < pixel_array_size; i++)
-    {
-        data += String(pixels[i]);
-        data += ",";
-    }
-
-    Serial.println(data.length());
-    Serial.println(data);
-
-    if (client.connect(host, 443))
-    {
-        String json = "{\"data\":\"" + data + "\"}";
-
-        client.print("POST " + url + " HTTP/1.1\r\n");
-        client.print("Host: " + String(host) + ":443\r\n");
-        client.print("Content-Type: application/json\r\n");
-        client.print("Connection: Keep-Alive\r\n");
-        client.print("Content-Length: " + String(json.length()) + "\r\n");
-        client.print("\r\n");
-        client.print(json + "\r\n");
-
-        unsigned long timeout = millis();
-        while (client.available() == 0)
+        String data = "";
+        int j = 0;
+        int k = 0;
+        for (int i = 0; i < PIXEL_ARRAY_SIZE; i++)
         {
-            if (millis() - timeout > 10000)
+            data += String(pixels[i]);
+            data += ",";
+        }
+
+        Serial.println(data.length());
+        Serial.println(data);
+
+        if (client.connect(host, 443))
+        {
+            String json = "{\"data\":\"" + data + "\"}";
+
+            client.print(header);
+            client.print("Content-Length: " + String(json.length()) + "\r\n");
+            client.print("\r\n");
+            client.print(json + "\r\n");
+
+            unsigned long timeout = millis();
+            while (client.available() == 0)
             {
-                Serial.println(">>> Client Timeout !");
-                client.stop();
-                return;
+                if (millis() - timeout > 10000)
+                {
+                    Serial.println(">>> Client Timeout !");
+                    client.stop();
+                    return;
+                }
             }
+
+            while (client.available())
+            {
+                String line = client.readStringUntil('\r');
+                Serial.print(line);
+            }
+
+            Serial.println("closing connection");
+            client.stop();
         }
-
-        while (client.available())
-        {
-            String line = client.readStringUntil('\r');
-            Serial.print(line);
-        }
-
-        Serial.println("closing connection");
-        client.stop();
-    }
-
-    delay(10000);
+    });
 }

@@ -7,3 +7,4 @@ secretConfig.h
 env.h
 M5Atom/mqtt/m5AtomBase.h
 M5Atom/mqtt/intervalMs.h
+NefryBT/AMG8833/intervalMs.h
