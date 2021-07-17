@@ -10,7 +10,7 @@
 #include "env.h"
 
 // LoopTime
-const int LOOPTIME_MQTT = 1 * 1000;
+const int LOOPTIME_MQTT = 5 * 1000;
 
 #include "mqttConfig.h"
 #include "mqttESP32.h"
